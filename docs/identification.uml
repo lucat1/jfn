@@ -1,0 +1,18 @@
+@startuml
+!theme carbon-gray
+autonumber
+
+Gateway <- Runner : Identification request
+group Identification [until Identification OK]
+  Gateway -> Runner : Identification challenge
+  Gateway <- Runner : Identification response
+  group Identification validation
+    Gateway -> Runner : Identification OK
+  else Invalid challenge
+    Gateway -> Runner : Identification FAIL
+  end
+else Network error
+Gateway <- Runner : Identification request (retry)
+end
+
+@enduml
