@@ -1,0 +1,25 @@
+@startuml
+!theme carbon-gray
+autonumber
+
+Client -> Gateway : Run fn@x(req)
+group Redundant runner selection [foreach Runner #r until successful]
+  Gateway -> Runner : Load x
+  group Embedding service errors
+    Gateway <-- Runner : Loaded x at Runner #r port p
+  else Error
+    Gateway <- Runner : Could not load x
+  else Timeout
+    Gateway -> Gateway : Loading x timed out
+  end
+end
+
+Gateway -> Runner : Run fn@x(req) on Runner #r port p
+group Embedding service errors
+  Gateway <- Runner : Result fn@x(req)(y) #k
+else Timeout
+  Gateway -> Gateway : Result fn@x(req)(timeout) #k
+end
+
+Client <- Gateway : Result fn@x(req)(y)
+@enduml
