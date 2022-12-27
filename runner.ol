@@ -1,33 +1,26 @@
-include "time.ol"
-
-type RunRequest { input: string }
-type RunResponse { output: string }
-
-interface RunnerAPI {
-  RequestResponse:
-    run( RunRequest )( RunResponse )
-}
+from timeService import TimePrinter, TimeAPI
+include "runner.iol"
 
 service Runner {
   execution: concurrent
 
   outputPort TimePrinterPort {
-    Interfaces: TimeAPI
+    interfaces: TimeAPI
   }
-  embed TimePrinter in TimePrinter
+  embed TimePrinter in TimePrinterPort
 
   inputPort RunnerInput {
     location: "socket://localhost:8081"
-    protocol: http { format = "json" }
+    protocol: "sodep"
     interfaces: RunnerAPI
   }
 
   main {
     run( request )( response ) {
-      time@TimePrinter({
-        .format = request.input
-      })(response.output)
+      fmt = string(request.data)
+      time@TimePrinterPort({
+        .format = fmt
+      })(response.data)
     }
   }
 }
-

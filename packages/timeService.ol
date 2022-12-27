@@ -12,7 +12,7 @@ service TimePrinter {
   embed Time as Time
 
   inputPort TimeInput {
-    location: "socket://localhost:8080"
+    location: "local"
     protocol: http { format = "json" }
     interfaces: TimeAPI
   }
