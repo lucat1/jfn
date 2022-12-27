@@ -1,11 +1,12 @@
-from timeService import TimePrinter, TimeAPI
+from timeService import TimePrinter
 include "runner.iol"
+include "../function.iol"
 
 service Runner {
   execution: concurrent
 
   outputPort TimePrinterPort {
-    interfaces: TimeAPI
+    interfaces: FunctionAPI
   }
   embed TimePrinter in TimePrinterPort
 
@@ -17,10 +18,9 @@ service Runner {
 
   main {
     run( request )( response ) {
-      fmt = string(request.data)
-      time@TimePrinterPort({
-        .format = fmt
-      })(response.data)
+      fn@TimePrinterPort({
+        .data = request.data
+      })(response)
     }
   }
 }

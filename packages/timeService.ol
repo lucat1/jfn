@@ -1,11 +1,5 @@
 from time import Time
-
-type TimeRequest { format: string }
-
-interface TimeAPI {
-  RequestResponse:
-    time( TimeRequest )( string )
-}
+include "../function.iol"
 
 service TimePrinter {
   execution: concurrent
@@ -13,13 +7,16 @@ service TimePrinter {
 
   inputPort TimeInput {
     location: "local"
-    protocol: http { format = "json" }
-    interfaces: TimeAPI
+    protocol: "sodep"
+    interfaces: FunctionAPI
   }
 
   main {
-    time( request )( response ) {
-      getCurrentDateTime@Time(request)(response)
+    fn( request )( response ) {
+      fmt = (request.data)
+      getCurrentDateTime@Time({
+        .format = fmt
+      })(response.data)
     }
   }
 }
