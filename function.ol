@@ -5,4 +5,3 @@ interface FunctionAPI {
   RequestResponse:
     fn( FunctionRequest )( FunctionResponse )
 }
-
