@@ -1,5 +1,5 @@
-from .runner import RunnerAPI
 from console import Console
+from .runner import RunnerAPI
 
 type GatewayRequest {
   name: string
@@ -23,9 +23,9 @@ service Gateway {
   }
 
   inputPort GatewayInput {
-      location: "socket://localhost:8080"
-      protocol: http { format = "json" }
-      interfaces: GatewayAPI
+    location: "socket://localhost:8080"
+    protocol: http { format = "json" }
+    interfaces: GatewayAPI
   }
 
   init {
