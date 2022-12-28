@@ -1,5 +1,5 @@
 from time import Time
-include "../function.iol"
+from .function import FunctionAPI
 
 service TimePrinter {
   execution: concurrent

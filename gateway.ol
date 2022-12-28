@@ -1,6 +1,5 @@
-from runner import RunnerAPI
+from .runner import RunnerAPI
 from console import Console
-include "runner.iol"
 
 type GatewayRequest {
   name: string
@@ -8,11 +7,12 @@ type GatewayRequest {
 }
 type GatewayResponse { data: undefined }
 
-interface GreeterAPI {
-  RequestResponse: op( GatewayRequest )( GatewayResponse )
+interface GatewayAPI {
+  RequestResponse:
+    op( GatewayRequest )( GatewayResponse )
 }
 
-service Greeter {
+service Gateway {
   execution: concurrent
   embed Console as Console
 
@@ -22,10 +22,10 @@ service Greeter {
     interfaces: RunnerAPI
   }
 
-  inputPort GreeterInput {
+  inputPort GatewayInput {
       location: "socket://localhost:8080"
       protocol: http { format = "json" }
-      interfaces: GreeterAPI
+      interfaces: GatewayAPI
   }
 
   init {
