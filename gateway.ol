@@ -1,11 +1,16 @@
 from console import Console
+from string_utils import StringUtils
 from .runner import RunnerAPI
 
 type GatewayRequest {
   name: string
   data: undefined
 }
-type GatewayResponse { data: undefined }
+
+type GatewayResponse {
+  error: bool
+  data: undefined
+}
 
 interface GatewayAPI {
   RequestResponse:
@@ -15,6 +20,7 @@ interface GatewayAPI {
 service Gateway {
   execution: concurrent
   embed Console as Console
+  embed StringUtils as StringUtils
 
   outputPort Runner {
     location: "socket://localhost:8081"
@@ -34,8 +40,13 @@ service Gateway {
 
   main {
     op( request )( response ) {
-      println@Console("Calling " + request.name)()
-      run@Runner(request)(response)
+      getRandomUUID@StringUtils()(id)
+      println@Console("Calling " + request.name + " #" + id)()
+      run@Runner({
+        .name = request.name
+        .id = id
+        .data = request.data
+      })(response)
     }
   }
 }
