@@ -4,12 +4,12 @@ from .runner import RunnerAPI
 
 type GatewayRequest {
   name: string
-  data: undefined
+  data?: undefined
 }
 
 type GatewayResponse {
   error: bool
-  data: undefined
+  data?: undefined
 }
 
 interface GatewayAPI {
@@ -43,9 +43,9 @@ service Gateway {
       getRandomUUID@StringUtils()(id)
       println@Console("Calling " + request.name + " #" + id)()
       run@Runner({
-        .name = request.name
-        .id = id
-        .data = request.data
+        name = request.name
+        id = id
+        data = request.data
       })(response)
     }
   }

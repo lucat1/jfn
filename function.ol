@@ -1,5 +1,5 @@
-type FunctionRequest  { data: undefined }
-type FunctionResponse { data: undefined }
+type FunctionRequest  { data?: undefined }
+type FunctionResponse { data?: undefined }
 
 interface FunctionAPI {
   RequestResponse:

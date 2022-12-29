@@ -73,9 +73,9 @@ service FunctionCatalog {
         }
       } else {
         writeFile@File({
-          .filename = filename
-          .format = "text"
-          .content = request.content
+          filename = filename
+          format = "text"
+          content = request.content
         })()
         response.error = false
       }

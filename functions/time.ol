@@ -21,7 +21,7 @@ service TimePrinter {
   main {
     fn( request )( response ) {
       getCurrentDateTime@Time({
-        .format = request.data
+        format = request.data
       })(response.data)
     }
   }
