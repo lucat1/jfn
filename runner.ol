@@ -69,7 +69,8 @@ service Runner {
       })(response)
       if(!response.error) {
         derive_filename
-        content = response.data
+        content << response.data
+        undef(response.data)
         writeFile@File({
           filename = filename
           format = "text"
@@ -87,12 +88,14 @@ service Runner {
           location = loc
         })()
         invoke_data.data = request.data
+        invoke_data.data << request.data
         invoke@Reflection({
           outputPort = port_name
-          data = invoke_data
+          data << invoke_data
           operation = RUNNER_FUNCTION_OPERATION
-        })(response.data)
+        })(out)
         removeOutputPort@Runtime(port_name)()
+        println@Console("Run successful")()
         response.error = false
       }
     }
