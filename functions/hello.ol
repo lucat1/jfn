@@ -1,14 +1,18 @@
+from console import Console
+
+type HelloRequest { data: void }
 type HelloResponse { data: string }
 
 interface HelloAPI {
   RequestResponse:
-    fn( void )( HelloResponse )
+    fn( HelloRequest )( HelloResponse )
 }
 
-service TimePrinter {
+service HelloPrinter {
+  embed Console as Console
   execution: concurrent
 
-  inputPort TimeInput {
+  inputPort HelloInput {
     location: "local"
     protocol: "sodep"
     interfaces: HelloAPI
@@ -16,6 +20,7 @@ service TimePrinter {
 
   main {
     fn( request )( response ) {
+      println@Console("Wrote Hello World!")()
       response.data = "Hello World!"
     }
   }

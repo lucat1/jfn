@@ -7,8 +7,8 @@ from .function import FunctionAPI
 from .function_catalog import FunctionCatalogAPI
 
 type RunRequest {
-  name: string
   id: string
+  name: string
   data?: undefined
 }
 
@@ -87,15 +87,17 @@ service Runner {
           name = port_name
           location = loc
         })()
-        invoke_data.data = request.data
-        invoke_data.data << request.data
+        invoke_data << request
+        undef(invoke_data.id)
+        undef(invoke_data.name)
         invoke@Reflection({
           outputPort = port_name
           data << invoke_data
           operation = RUNNER_FUNCTION_OPERATION
-        })(out)
+        })(output)
         removeOutputPort@Runtime(port_name)()
         println@Console("Run successful")()
+        response.data << output.data
         response.error = false
       }
     }
