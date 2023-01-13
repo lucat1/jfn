@@ -90,7 +90,7 @@ service Runner {
         invoke_data << request
         undef(invoke_data.id)
         undef(invoke_data.name)
-        invoke@Reflection({
+        invokeRRUnsafe@Reflection({
           outputPort = port_name
           data << invoke_data
           operation = RUNNER_FUNCTION_OPERATION

@@ -1,10 +1,11 @@
 from console import Console
 
 type HelloRequest { data: void }
+type HelloResponse { data: string }
 
 interface HelloAPI {
   RequestResponse:
-    fn( HelloRequest )( string )
+    fn( HelloRequest )( HelloResponse )
 }
 
 service HelloPrinter {
@@ -19,8 +20,7 @@ service HelloPrinter {
 
   main {
     fn( request )( response ) {
-      println@Console("Wrote Hello World!")()
-      response = "Hello World!"
+      response.data = "Hello World!"
     }
   }
 }
