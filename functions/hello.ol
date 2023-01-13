@@ -1,5 +1,3 @@
-from console import Console
-
 type HelloRequest { data: void }
 type HelloResponse { data: string }
 
@@ -9,7 +7,6 @@ interface HelloAPI {
 }
 
 service HelloPrinter {
-  embed Console as Console
   execution: concurrent
 
   inputPort HelloInput {

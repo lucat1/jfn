@@ -42,7 +42,6 @@ service Gateway {
     op( request )( response ) {
       getRandomUUID@StringUtils()(id)
       println@Console("Calling " + request.name + " #" + id)()
-      println@Console("data " + request.data)()
       run@Runner({
         name = request.name
         id = id

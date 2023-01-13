@@ -96,7 +96,6 @@ service Runner {
           operation = RUNNER_FUNCTION_OPERATION
         })(output)
         removeOutputPort@Runtime(port_name)()
-        println@Console("output " + output)()
         println@Console("Run successful")()
         response.data << output.data
         response.error = false
