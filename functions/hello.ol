@@ -1,4 +1,4 @@
-type HelloRequest { data: void }
+type HelloRequest { data?: string }
 type HelloResponse { data: string }
 
 interface HelloAPI {
@@ -7,7 +7,7 @@ interface HelloAPI {
 }
 
 service HelloPrinter {
-  execution: concurrent
+  execution: single
 
   inputPort HelloInput {
     location: "local"
@@ -17,7 +17,9 @@ service HelloPrinter {
 
   main {
     fn( request )( response ) {
-      response.data = "Hello World!"
+      if(!is_defined(request.data))
+        request.data = "anonymous"
+      response.data = "Hello " +  request.data +"!"
     }
   }
 }

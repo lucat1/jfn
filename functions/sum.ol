@@ -7,7 +7,7 @@ interface SumAPI {
 }
 
 service Sum {
-  execution: concurrent
+  execution: single
 
   inputPort SumInput {
     location: "local"

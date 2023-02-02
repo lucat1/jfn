@@ -7,8 +7,8 @@ from .function import FunctionAPI
 from .function_catalog import FunctionCatalogAPI
 
 type RunRequest {
-  id: string
   name: string
+  id: string
   data?: undefined
 }
 
@@ -29,7 +29,7 @@ constants {
 }
 
 define derive_filename {
-  filename = RUNNER_FUNCTIONS_PATH + sep + request.id + ".ol"
+  filename = RUNNER_FUNCTIONS_PATH + sep + request.name + ".ol"
 }
 
 service Runner {
@@ -63,20 +63,26 @@ service Runner {
 
   main {
     run( request )( response ) {
-      println@Console("Calling " + request.name + " #" + request.id)()
-      get@FunctionCatalog({
-        name = request.name
-      })(response)
+      /* println@Console("Calling " + request.name + " #" + request.id)() */
+      derive_filename
+      exists@File(filename)(exists)
+      // TODO: use the function name + the hash of the contents as a file name
+      if(!exists) {
+        get@FunctionCatalog({
+          name = request.name
+        })(response)
+        if(!response.error) {
+          content << response.data
+          undef(response.data)
+          writeFile@File({
+            filename = filename
+            format = "text"
+            content = content
+          })()
+          println@Console("Wrote function to " + filename)()
+        }
+      }
       if(!response.error) {
-        derive_filename
-        content << response.data
-        undef(response.data)
-        writeFile@File({
-          filename = filename
-          format = "text"
-          content = content
-        })()
-        println@Console("Wrote function to " + filename)()
         loadEmbeddedService@Runtime({
           filepath = filename
           type = "jolie"
@@ -88,15 +94,15 @@ service Runner {
           location = loc
         })()
         invoke_data << request
-        undef(invoke_data.id)
         undef(invoke_data.name)
+        undef(invoke_data.id)
         invokeRRUnsafe@Reflection({
           outputPort = port_name
           data << invoke_data
           operation = RUNNER_FUNCTION_OPERATION
         })(output)
         removeOutputPort@Runtime(port_name)()
-        println@Console("Run successful")()
+        /* println@Console("Run successful")() */
         response.data << output.data
         response.error = false
       }
