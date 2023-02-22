@@ -63,7 +63,6 @@ service Runner {
 
   main {
     run( request )( response ) {
-      /* println@Console("Calling " + request.name + " #" + request.id)() */
       derive_filename
       exists@File(filename)(exists)
       // TODO: use the function name + the hash of the contents as a file name
@@ -74,33 +73,61 @@ service Runner {
         if(!response.error) {
           content << response.data
           undef(response.data)
-          writeFile@File({
-            filename = filename
-            format = "text"
-            content = content
-          })()
-          println@Console("Wrote function to " + filename)()
+          scope(write_function) {
+            install(
+              FileNotFound => {
+                response.error = true
+                response.data = "Could not find function file or its parent directories"
+              },
+              IOException => {
+                response.error = true
+                response.data = "Could not write to the function file"
+              }
+            )
+            writeFile@File({
+              filename = filename
+              format = "text"
+              content = content
+            })()
+            println@Console("Wrote function to " + filename)()
+          }
         }
       }
       if(!response.error) {
-        loadEmbeddedService@Runtime({
-          filepath = filename
-          type = "jolie"
-        })(loc)
-        port_name = "op-" + request.id
-        setOutputPort@Runtime({
-          protocol = RUNNER_FUNCTION_PROTOCOL
-          name = port_name
-          location = loc
-        })()
+        scope(load_service) {
+          install(
+            RuntimeException => {
+              response.error = true
+              response.data = "Could not load function service: " + load_service.RuntimeException
+            }
+          )
+          loadEmbeddedService@Runtime({
+            filepath = filename
+            type = "jolie"
+          })(loc)
+          port_name = "op-" + request.id
+          setOutputPort@Runtime({
+            protocol = RUNNER_FUNCTION_PROTOCOL
+            name = port_name
+            location = loc
+          })()
+        }
         invoke_data << request
         undef(invoke_data.name)
         undef(invoke_data.id)
-        invokeRRUnsafe@Reflection({
-          outputPort = port_name
-          data << invoke_data
-          operation = RUNNER_FUNCTION_OPERATION
-        })(output)
+        scope(call_service) {
+          install(
+            InvocationFault => {
+              response.error = true
+              response.data = "Error while calling the function: " + call_service.InvocationFault.name
+            }
+          )
+          invokeRRUnsafe@Reflection({
+            outputPort = port_name
+            data << invoke_data
+            operation = RUNNER_FUNCTION_OPERATION
+          })(output)
+        }
         removeOutputPort@Runtime(port_name)()
         /* println@Console("Run successful")() */
         response.data << output.data
