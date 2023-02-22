@@ -127,11 +127,11 @@ service Runner {
             data << invoke_data
             operation = RUNNER_FUNCTION_OPERATION
           })(output)
+          removeOutputPort@Runtime(port_name)()
+          /* println@Console("Run successful")() */
+          response.data << output.data
+          response.error = false
         }
-        removeOutputPort@Runtime(port_name)()
-        /* println@Console("Run successful")() */
-        response.data << output.data
-        response.error = false
       }
     }
   }
