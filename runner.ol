@@ -1,10 +1,20 @@
 from console import Console
+from string_utils import StringUtils
 from file import File
 from runtime import Runtime
 from reflection import Reflection
 from .runner import RunnerAPI
+from .gateway import GatewayInternalAPI
 from .function import FunctionAPI
 from .function_catalog import FunctionCatalogAPI
+
+type RunnerParams {
+  location: string
+  gatewayInternal: string
+  functionCatalog: string
+
+  verbose: bool
+}
 
 type RunRequest {
   name: string
@@ -19,6 +29,7 @@ type RunResponse {
 
 interface RunnerAPI {
   RequestResponse:
+    ping( int )( int ),
     run( RunRequest )( RunResponse )
 }
 
@@ -32,21 +43,28 @@ define derive_filename {
   filename = RUNNER_FUNCTIONS_PATH + sep + request.name + ".ol"
 }
 
-service Runner {
+service Runner( p : RunnerParams ) {
   execution: concurrent
   embed Console as Console
   embed File as File
   embed Runtime as Runtime
   embed Reflection as Reflection
+  embed StringUtils as StringUtils
 
   outputPort FunctionCatalog {
-    location: "socket://localhost:8082"
+    location: p.functionCatalog
     protocol: http { format = "json" }
     interfaces: FunctionCatalogAPI
   }
 
+  outputPort Gateway {
+    location: p.gatewayInternal
+    protocol: "sodep"
+    interfaces: GatewayInternalAPI
+  }
+
   inputPort RunnerInput {
-    location: "socket://localhost:8081"
+    location: p.location
     protocol: "sodep"
     interfaces: RunnerAPI
   }
@@ -59,10 +77,18 @@ service Runner {
     if(!exists) {
       mkdir@File(RUNNER_FUNCTIONS_PATH)()
     }
+
+    register@Gateway({
+      location = p.location
+    })()
   }
 
   main {
     run( request )( response ) {
+      if(p.verbose) {
+        valueToPrettyString@StringUtils( request )( t )
+        println@Console( "Calling: " + t )()
+      }
       derive_filename
       exists@File(filename)(exists)
       // TODO: use the function name + the hash of the contents as a file name
@@ -89,7 +115,9 @@ service Runner {
               format = "text"
               content = content
             })()
-            println@Console("Wrote function to " + filename)()
+            if(p.verbose) {
+              println@Console("Wrote function to " + filename)()
+            }
           }
         }
       }

@@ -1,6 +1,15 @@
 from console import Console
 from string_utils import StringUtils
+from runtime import Runtime
+from reflection import Reflection
 from .runner import RunnerAPI
+
+type GatewayParams {
+  location: string
+  internal: string
+  
+  verbose: bool
+}
 
 type GatewayRequest {
   name: string
@@ -17,36 +26,88 @@ interface GatewayAPI {
     op( GatewayRequest )( GatewayResponse )
 }
 
-service Gateway {
+type GatewayRegisterRequest {
+  location: string
+}
+
+interface GatewayInternalAPI {
+  RequestResponse:
+    register( GatewayRegisterRequest )( void )
+}
+
+service Gateway( p : GatewayParams ) {
   execution: concurrent
   embed Console as Console
   embed StringUtils as StringUtils
-
-  outputPort Runner {
-    location: "socket://localhost:8081"
-    protocol: "sodep"
-    interfaces: RunnerAPI
-  }
+  embed Runtime as Runtime
+  embed Reflection as Reflection
 
   inputPort GatewayInput {
-    location: "socket://localhost:8080"
+    location: p.location
     protocol: http { format = "json" }
     interfaces: GatewayAPI
   }
 
+  inputPort GatewayInternalInput {
+    location: p.internal
+    protocol: "sodep"
+    interfaces: GatewayInternalAPI
+  }
+
   init {
     enableTimestamp@Console(true)()
+    global.nextRunner = 0
   }
 
   main {
-    op( request )( response ) {
-      getRandomUUID@StringUtils()(id)
-      /* println@Console("Calling " + request.name + " #" + id)() */
-      run@Runner({
-        name = request.name
-        id = id
-        data = request.data
-      })(response)
-    }
+    [op( request )( response ) {
+      if(#global.runner <= 0) {
+        response.data = "There are no runners to execute the function"
+        response.error = true
+      } else {
+        i = global.nextRunner
+        if(global.nextRunner + 1 >= #global.runners) {
+          global.nextRunner = 0
+        } else {
+          global.nextRunner = global.nextRunner + 1
+        }
+
+        getRandomUUID@StringUtils()(id)
+        scope(call_runner) {
+          install(
+            TypeMismatch => {
+              response.error = true
+              response.data = "Error while calling the function: " + call_runner.TypeMismatch
+            }
+          )
+
+          invoke_data << {
+            name = request.name
+            id = id
+            data = request.data
+          }
+          if(p.verbose) {
+            valueToPrettyString@StringUtils( request )( t )
+            println@Console( "Sending to runner #" + i + ": " + t )()
+          }
+          invokeRRUnsafe@Reflection({
+            outputPort = global.runner[i]
+            data << invoke_data
+            operation = "run"
+          })(response)
+        }
+      }
+    }]
+
+    [register( request )( response ) {
+          name = "port_" +  #global.runner
+          println@Console("Registering runner #" + #global.runner)()
+          setOutputPort@Runtime({
+            protocol = "sodep"
+            name = name
+            location = request.location
+          })()
+          global.runner[#global.runner] = name
+    }]
   }
 }

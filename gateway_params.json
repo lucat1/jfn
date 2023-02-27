@@ -1,0 +1,5 @@
+{
+  "location": "socket://localhost:8080",
+  "internal": "socket://localhost:7071",
+  "verbose": true
+}
