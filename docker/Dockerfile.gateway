@@ -1,0 +1,10 @@
+FROM jolielang/jolie:edge-alpine
+
+COPY gateway.ol gateway.ol
+COPY gateway_params.json params.json
+
+VOLUME params.json
+EXPOSE 8010
+EXPOSE 8001
+
+CMD jolie --params params.json gateway.ol

@@ -1,0 +1,6 @@
+[submodule "jocker"]
+	path = jocker
+	url = https://github.com/jolie/jocker.git
+[submodule "jocker-source"]
+	path = jocker-source
+	url = https://github.com/jolie/jocker.git

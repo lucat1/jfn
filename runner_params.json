@@ -1,6 +1,6 @@
 {
-  "location": "socket://localhost:8081",
-  "gatewayInternal": "socket://localhost:7071",
-  "functionCatalog": "socket://localhost:8082",
+  "gatewayInternal": "socket://0.0.0.0:8001",
+  "location": "socket://0.0.0.0:8010",
+  "functionCatalog": "socket://0.0.0.0:7000",
   "verbose": true
 }

@@ -1,0 +1,9 @@
+FROM jolielang/jolie:edge-alpine
+
+COPY runner.ol runner.ol
+COPY gateway_params.json params.json
+
+VOLUME params.json
+EXPOSE 8020
+
+CMD jolie --params params.json runner.ol

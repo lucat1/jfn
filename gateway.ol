@@ -1,4 +1,6 @@
 from console import Console
+from math import Math
+from scheduler import Scheduler
 from string_utils import StringUtils
 from runtime import Runtime
 from reflection import Reflection
@@ -35,9 +37,21 @@ interface GatewayInternalAPI {
     register( GatewayRegisterRequest )( void )
 }
 
+type SchedulerCallBackRequest: void {
+    .jobName: string
+    .groupName: string
+}
+
+interface SchedulerCallBackInterface {
+OneWay:
+  schedulerCallback( SchedulerCallBackRequest )
+}
+
 service Gateway( p : GatewayParams ) {
   execution: concurrent
   embed Console as Console
+  embed Scheduler as Scheduler
+  embed Math as Math
   embed StringUtils as StringUtils
   embed Runtime as Runtime
   embed Reflection as Reflection
@@ -54,12 +68,41 @@ service Gateway( p : GatewayParams ) {
     interfaces: GatewayInternalAPI
   }
 
+  inputPort SchedulerCallBack {
+    location: "local"
+    interfaces: SchedulerCallBackInterface
+  }
+
   init {
     enableTimestamp@Console(true)()
     global.nextRunner = 0
   }
 
   main {
+    [register( request )( ) {
+      name = "port_" +  #global.runner
+      setOutputPort@Runtime({
+        protocol = "sodep"
+        name = name
+        location = request.location
+      })()
+      println@Console("Registered runner #" + #global.runner)()
+      global.runner[#global.runner] = name
+
+      setCronJob@Scheduler({
+        jobName = "ping-" + name
+        groupName = "ping"
+        cronSpecs << {
+          second = "1"
+        }
+      })()
+    }]
+
+    [schedulerCallback(request)] {
+      valueToPrettyString@StringUtils( request )( t )
+      println@Console( "Callback: " + t )()
+    }
+
     [op( request )( response ) {
       if(#global.runner <= 0) {
         response.data = "There are no runners to execute the function"
@@ -97,17 +140,6 @@ service Gateway( p : GatewayParams ) {
           })(response)
         }
       }
-    }]
-
-    [register( request )( response ) {
-          name = "port_" +  #global.runner
-          println@Console("Registering runner #" + #global.runner)()
-          setOutputPort@Runtime({
-            protocol = "sodep"
-            name = name
-            location = request.location
-          })()
-          global.runner[#global.runner] = name
     }]
   }
 }

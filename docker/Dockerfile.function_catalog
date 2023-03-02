@@ -1,0 +1,8 @@
+FROM jolielang/jolie:edge-alpine
+
+COPY function_catalog.ol function_catalog.ol
+
+EXPOSE 7000
+VOLUME /data
+
+CMD jolie function_catalog.ol

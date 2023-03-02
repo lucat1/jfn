@@ -1,6 +1,12 @@
 from console import Console
 from file import File
 
+type FunctionCatalogRunner {
+  location: string
+
+  verbose: bool
+}
+
 type FunctionCatalogGetRequest  { name: string }
 type FunctionCatalogPutRequest  {
   name: string
@@ -25,14 +31,14 @@ define derive_filename {
   filename = root + sep + FUNCTIONS_PATH + sep + request.name + ".ol"
 }
 
-service FunctionCatalog {
+service FunctionCatalog( p : FunctionCatalogRunner ) {
   execution: concurrent
   embed Console as Console
   embed File as File
 
   inputPort FunctionCatalogInput {
-    location: "socket://localhost:8082"
-    protocol: http { format = "json" }
+    location: p.location
+    protocol: "sodep"
     interfaces: FunctionCatalogAPI
   }
 
@@ -46,7 +52,9 @@ service FunctionCatalog {
     [get( request )( response ) {
       derive_filename
       exists@File(filename)(exists)
-      println@Console("Looking for \"" + request.name + "\" in " + filename)()
+      if(p.verbose) {
+        println@Console("Looking for \"" + request.name + "\" in " + filename)()
+      }
       if(!exists) {
         with(response) {
           .error = true

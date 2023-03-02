@@ -53,7 +53,7 @@ service Runner( p : RunnerParams ) {
 
   outputPort FunctionCatalog {
     location: p.functionCatalog
-    protocol: http { format = "json" }
+    protocol: "sodep"
     interfaces: FunctionCatalogAPI
   }
 
@@ -78,6 +78,9 @@ service Runner( p : RunnerParams ) {
       mkdir@File(RUNNER_FUNCTIONS_PATH)()
     }
 
+    if(p.verbose) {
+      println@Console("Attaching to gateway at " + p.gatewayInternal)()
+    }
     register@Gateway({
       location = p.location
     })()
