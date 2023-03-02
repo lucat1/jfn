@@ -3,19 +3,13 @@
 autonumber
 
 Gateway <- Runner : Register request
-group Register
-  Gateway -> Runner : Register OK #k
-else Error (not reachable backwards, etc)
-  Gateway -> Runner : Register Error
-end
 
 group Heartbeat [repeat every n ms]
-  Gateway <- Runner : Heartbeat
-  Gateway --> Runner : Heartbeat OK
+  Gateway -> Runner : Heartbeat
+  Gateway <-- Runner : Heartbeat OK
 else Network error
   Gateway -> Gateway : Unregister #k
 end
 
   Gateway <- Runner : Unregister #k
-  Gateway --> Runner : Unregister OK
 @enduml
