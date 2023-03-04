@@ -37,9 +37,9 @@ interface GatewayInternalAPI {
     register( GatewayRegisterRequest )( void )
 }
 
-type SchedulerCallBackRequest: void {
-    .jobName: string
-    .groupName: string
+type SchedulerCallBackRequest {
+    jobName: string
+    groupName: string
 }
 
 interface SchedulerCallBackInterface {
@@ -75,6 +75,9 @@ service Gateway( p : GatewayParams ) {
 
   init {
     enableTimestamp@Console(true)()
+    setCallbackOperation@Scheduler({
+      operationName = "schedulerCallback"
+    })
     global.nextRunner = 0
   }
 
@@ -93,7 +96,13 @@ service Gateway( p : GatewayParams ) {
         jobName = "ping-" + name
         groupName = "ping"
         cronSpecs << {
-          second = "1"
+          year = "*"
+          dayOfWeek = "*"
+          month = "*"
+          dayOfMonth = "?"
+          hour = "0"
+          minute = "0"
+          second = "*"
         }
       })()
     }]
