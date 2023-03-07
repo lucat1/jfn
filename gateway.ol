@@ -5,6 +5,7 @@ from string_utils import StringUtils
 from runtime import Runtime
 from reflection import Reflection
 from .runner import RunnerAPI
+from .scheduler import SchedulerCallBackInterface
 
 type GatewayParams {
   location: string
@@ -37,16 +38,6 @@ interface GatewayInternalAPI {
     register( GatewayRegisterRequest )( void )
 }
 
-type SchedulerCallBackRequest {
-    jobName: string
-    groupName: string
-}
-
-interface SchedulerCallBackInterface {
-OneWay:
-  schedulerCallback( SchedulerCallBackRequest )
-}
-
 service Gateway( p : GatewayParams ) {
   execution: concurrent
   embed Console as Console
@@ -55,6 +46,11 @@ service Gateway( p : GatewayParams ) {
   embed StringUtils as StringUtils
   embed Runtime as Runtime
   embed Reflection as Reflection
+
+  define unregister {
+    println@Console("Ping failed, removing runner: #" + i)()
+    undef(global.runners[i])
+  }
 
   inputPort GatewayInput {
     location: p.location
@@ -79,46 +75,66 @@ service Gateway( p : GatewayParams ) {
       operationName = "schedulerCallback"
     })
     global.nextRunner = 0
+    setCronJob@Scheduler({
+      jobName = "ping"
+      groupName = "ping"
+      cronSpecs << {
+        year = "*"
+        dayOfWeek = "*"
+        month = "*"
+        dayOfMonth = "?"
+        hour = "*"
+        minute = "*"
+        second = "*"
+      }
+    })()
   }
 
   main {
     [register( request )( ) {
-      name = "port_" +  #global.runner
+      name = "port_" +  #global.runners
       setOutputPort@Runtime({
         protocol = "sodep"
         name = name
         location = request.location
       })()
-      println@Console("Registered runner #" + #global.runner)()
-      global.runner[#global.runner] = name
-
-      setCronJob@Scheduler({
-        jobName = "ping-" + name
-        groupName = "ping"
-        cronSpecs << {
-          year = "*"
-          dayOfWeek = "*"
-          month = "*"
-          dayOfMonth = "?"
-          hour = "0"
-          minute = "0"
-          second = "*"
-        }
-      })()
+      println@Console("Registered runner #" + #global.runners)()
+      global.runners[#global.runners] = name
     }]
 
+
     [schedulerCallback(request)] {
-      valueToPrettyString@StringUtils( request )( t )
-      println@Console( "Callback: " + t )()
+      for( i = 0, i < #global.runners, i++ ) {
+        port = global.runners[i]
+        scope(call_runner) {
+          install(
+            TypeMismatch => {
+              unregister
+            }
+          )
+          if(p.verbose) {
+            println@Console("Pinging runner on port: " + port)()
+          }
+          invokeRRUnsafe@Reflection({
+            outputPort = port
+            data = 0
+            operation = "ping"
+          })(o)
+
+          if(o != 0) {
+            unregister
+          }
+        }
+      }
     }
 
     [op( request )( response ) {
-      if(#global.runner <= 0) {
+      if(#global.runners <= 0) {
         response.data = "There are no runners to execute the function"
         response.error = true
       } else {
         i = global.nextRunner
-        if(global.nextRunner + 1 >= #global.runners) {
+        if(global.nextRunner + 1 >= #global.runnerss) {
           global.nextRunner = 0
         } else {
           global.nextRunner = global.nextRunner + 1
@@ -143,7 +159,7 @@ service Gateway( p : GatewayParams ) {
             println@Console( "Sending to runner #" + i + ": " + t )()
           }
           invokeRRUnsafe@Reflection({
-            outputPort = global.runner[i]
+            outputPort = global.runners[i]
             data << invoke_data
             operation = "run"
           })(response)

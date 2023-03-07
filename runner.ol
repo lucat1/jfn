@@ -1,4 +1,5 @@
 from console import Console
+from scheduler import Scheduler
 from string_utils import StringUtils
 from file import File
 from runtime import Runtime
@@ -7,6 +8,7 @@ from .runner import RunnerAPI
 from .gateway import GatewayInternalAPI
 from .function import FunctionAPI
 from .function_catalog import FunctionCatalogAPI
+from .scheduler import SchedulerCallBackInterface
 
 type RunnerParams {
   location: string
@@ -46,6 +48,7 @@ define derive_filename {
 service Runner( p : RunnerParams ) {
   execution: concurrent
   embed Console as Console
+  embed Scheduler as Scheduler
   embed File as File
   embed Runtime as Runtime
   embed Reflection as Reflection
@@ -69,6 +72,11 @@ service Runner( p : RunnerParams ) {
     interfaces: RunnerAPI
   }
 
+  inputPort SchedulerCallBack {
+    location: "local"
+    interfaces: SchedulerCallBackInterface
+  }
+
   init {
     enableTimestamp@Console(true)()
     getFileSeparator@File()(sep)
@@ -84,10 +92,38 @@ service Runner( p : RunnerParams ) {
     register@Gateway({
       location = p.location
     })()
+
+    global.lastPing = false
+    setCronJob@Scheduler({
+      jobName = "ping"
+      groupName = "ping"
+      cronSpecs << {
+        year = "*"
+        dayOfWeek = "*"
+        month = "*"
+        dayOfMonth = "?"
+        hour = "*"
+        minute = "*"
+        second = "0/10"
+      }
+    })()
   }
 
   main {
-    run( request )( response ) {
+    [ping( request )( response ) {
+      response = request
+      global.lastPing = true
+    }]
+
+    [schedulerCallback(request)] {
+      if(!global.lastPing) {
+        println@Console("Didn't receive a ping for more than 10 seconds, assuming the gateway is dead. Quitting")()
+        exit
+      }
+      global.lastPing = false
+    }
+
+    [run( request )( response ) {
       if(p.verbose) {
         valueToPrettyString@StringUtils( request )( t )
         println@Console( "Calling: " + t )()
@@ -164,6 +200,6 @@ service Runner( p : RunnerParams ) {
           response.error = false
         }
       }
-    }
+    }]
   }
 }
