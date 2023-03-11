@@ -1,4 +1,4 @@
 {
-  "internal": "socket://0.0.0.0:7000",
+  "location": "socket://0.0.0.0:7000",
   "verbose": true
 }

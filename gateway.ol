@@ -110,11 +110,11 @@ service Gateway( p : GatewayParams ) {
           install(
             TypeMismatch => {
               unregister
+            },
+            InvocationFault => {
+              unregister
             }
           )
-          if(p.verbose) {
-            println@Console("Pinging runner on port: " + port)()
-          }
           invokeRRUnsafe@Reflection({
             outputPort = port
             data = 0
@@ -134,7 +134,7 @@ service Gateway( p : GatewayParams ) {
         response.error = true
       } else {
         i = global.nextRunner
-        if(global.nextRunner + 1 >= #global.runnerss) {
+        if(global.nextRunner + 1 >= #global.runners) {
           global.nextRunner = 0
         } else {
           global.nextRunner = global.nextRunner + 1
@@ -146,6 +146,10 @@ service Gateway( p : GatewayParams ) {
             TypeMismatch => {
               response.error = true
               response.data = "Error while calling the function: " + call_runner.TypeMismatch
+            },
+            InvocationFault => {
+              response.error = true
+              response.data = "Could not invoke runner: " + call_runner.InvocationFault
             }
           )
 
