@@ -109,9 +109,17 @@ service Gateway( p : GatewayParams ) {
         scope(call_runner) {
           install(
             TypeMismatch => {
+              if(p.verbose) {
+                valueToPrettyString@StringUtils( call_runner.TypeMismatch )( t )
+                println@Console( "Ping error: " + t )()
+              }
               unregister
             },
             InvocationFault => {
+              if(p.verbose) {
+                valueToPrettyString@StringUtils( call_runner.InvocationFault )( t )
+                println@Console( "Ping error: " + t )()
+              }
               unregister
             }
           )

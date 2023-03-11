@@ -1,6 +1,6 @@
 type SchedulerCallBackRequest {
-    jobName: string
-    groupName: string
+  jobName: string
+  groupName: string
 }
 
 interface SchedulerCallBackInterface {
