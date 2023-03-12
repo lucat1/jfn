@@ -147,7 +147,7 @@ service Gateway( p : GatewayParams ) {
         if(global.nextRunner + 1 >= #global.runners) {
           global.nextRunner = 0
         } else {
-          global.nextRunner = global.nextRunner + 1
+          global.nextRunner++
         }
 
         getRandomUUID@StringUtils()(id)

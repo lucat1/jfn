@@ -21,27 +21,26 @@ service Provisioner(p : ProvisionerParams ) {
 
   inputPort ProvisionerInput {
     location: p.location
-    protocol: "sodep"
+    protocol: http { format = "json" }
     interfaces: ProvisionerAPI
   }
 
-
   outputPort Jocker {
     Location: "socket://localhost:8008"
-    Protocol: "sodep"
+    protocol: sodep
     Interfaces: InterfaceAPI
   }
 
   main {
     at( request )( response ) {
+      println@Console("called")()
       containers@Jocker({
         all = true
       })(test)
-      foreach(container : test.container) {
-        println@Console("name: " + container.Names[0])()
+      for(i = 0, i < #test.container, i++) {
+        println@Console("name: " + test.container[i].Names[0])()
       }
       response.node = "test"
     }
   }
 }
-

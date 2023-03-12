@@ -1,0 +1,15 @@
+@startuml
+!theme carbon-gray
+autonumber
+
+Provisioner <- Gateway : Register request
+
+group Heartbeat [repeat every n ms]
+  Provisioner -> Gateway : Heartbeat
+  Provisioner <-- Gateway : Heartbeat OK
+else Network error
+  Provisioner -> Provisioner : Unregister #k
+end
+
+Provisioner <- Gateway : Unregister #k
+@enduml

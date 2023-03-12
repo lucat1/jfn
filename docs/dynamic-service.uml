@@ -1,0 +1,15 @@
+@startuml
+!theme carbon-gray
+autonumber
+
+Provisioner -> DynamicService : Load fn
+
+DynamicService -> Provisioner : Up
+
+group Calls [as long as the load is sustained]
+Gateway -> DynamicService : op
+end
+
+Provisioner -> DynamicService : Stop
+
+@enduml
