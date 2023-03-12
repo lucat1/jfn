@@ -71,9 +71,6 @@ service Gateway( p : GatewayParams ) {
 
   init {
     enableTimestamp@Console(true)()
-    setCallbackOperation@Scheduler({
-      operationName = "schedulerCallback"
-    })
     global.nextRunner = 0
     setCronJob@Scheduler({
       jobName = "ping"
@@ -104,7 +101,7 @@ service Gateway( p : GatewayParams ) {
 
 
     [schedulerCallback(request)] {
-      for( i = 0, i < #global.runners, i++ ) {
+      spawn(i over #global.runners) in pongs {
         port = global.runners[i]
         scope(call_runner) {
           install(
@@ -127,11 +124,16 @@ service Gateway( p : GatewayParams ) {
             outputPort = port
             data = 0
             operation = "ping"
-          })(o)
+          })(pongs)
+        }
+      }
 
-          if(o != 0) {
-            unregister
+      for( i = 0, i < #pongs, i++ ){
+        if(pongs[i] != 0) {
+          if(p.verbose) {
+            println@Console( "Ping didn't return 0: " + pongs[i] )()
           }
+          unregister
         }
       }
     }
