@@ -5,8 +5,8 @@ from file import File
 from runtime import Runtime
 from reflection import Reflection
 from .runner import RunnerAPI
-from .gateway import GatewayInternalAPI
 from .function import FunctionAPI
+from .gateway import GatewayInternalAPI
 from .function_catalog import FunctionCatalogAPI
 from .scheduler import SchedulerCallBackInterface
 
@@ -64,6 +64,11 @@ service Runner( p : RunnerParams ) {
     location: p.gatewayInternal
     protocol: "sodep"
     interfaces: GatewayInternalAPI
+  }
+
+  outputPort Embedded {
+    protocol: "sodep"
+    interfaces: FunctionAPI
   }
 
   inputPort RunnerInput {
@@ -132,9 +137,17 @@ service Runner( p : RunnerParams ) {
       exists@File(filename)(exists)
       // TODO: use the function name + the hash of the contents as a file name
       if(!exists) {
-        get@FunctionCatalog({
-          name = request.name
-        })(response)
+        scope(load_service) {
+          install(
+            IOException => {
+              response.error = true
+              response.data = "Could not contact the function catalog"
+            }
+          )
+          get@FunctionCatalog({
+            name = request.name
+          })(response)
+        }
         if(!response.error) {
           content << response.data
           undef(response.data)
@@ -172,12 +185,6 @@ service Runner( p : RunnerParams ) {
             filepath = filename
             type = "jolie"
           })(loc)
-          port_name = "op-" + request.id
-          setOutputPort@Runtime({
-            protocol = RUNNER_FUNCTION_PROTOCOL
-            name = port_name
-            location = loc
-          })()
         }
         invoke_data << request
         undef(invoke_data.name)
@@ -189,12 +196,8 @@ service Runner( p : RunnerParams ) {
               response.data = "Error while calling the function: " + call_service.InvocationFault.name
             }
           )
-          invokeRRUnsafe@Reflection({
-            outputPort = port_name
-            data << invoke_data
-            operation = RUNNER_FUNCTION_OPERATION
-          })(output)
-          removeOutputPort@Runtime(port_name)()
+          Embedded.location = loc
+          fn@Embedded(invoke_data)(output)
           /* println@Console("Run successful")() */
           response.data << output.data
           response.error = false
