@@ -38,7 +38,7 @@ service FunctionCatalog( p : FunctionCatalogRunner ) {
 
   inputPort FunctionCatalogInput {
     location: p.location
-    protocol: "sodep"
+    protocol: sodep
     interfaces: FunctionCatalogAPI
   }
 

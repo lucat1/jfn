@@ -37,8 +37,6 @@ interface RunnerAPI {
 
 constants {
   RUNNER_FUNCTIONS_PATH = "/tmp/jfn",
-  RUNNER_FUNCTION_PROTOCOL = "sodep",
-  RUNNER_FUNCTION_OPERATION = "fn"
 }
 
 define derive_filename {
@@ -56,24 +54,24 @@ service Runner( p : RunnerParams ) {
 
   outputPort FunctionCatalog {
     location: p.functionCatalog
-    protocol: "sodep"
+    protocol: sodep
     interfaces: FunctionCatalogAPI
   }
 
   outputPort Gateway {
     location: p.gatewayInternal
-    protocol: "sodep"
+    protocol: sodep
     interfaces: GatewayInternalAPI
   }
 
   outputPort Embedded {
-    protocol: "sodep"
+    protocol: sodep
     interfaces: FunctionAPI
   }
 
   inputPort RunnerInput {
     location: p.location
-    protocol: "sodep"
+    protocol: sodep
     interfaces: RunnerAPI
   }
 

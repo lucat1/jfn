@@ -11,7 +11,7 @@ service HelloPrinter {
 
   inputPort HelloInput {
     location: "local"
-    protocol: "sodep"
+    protocol: sodep
     interfaces: HelloAPI
   }
 

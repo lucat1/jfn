@@ -14,7 +14,7 @@ service TimePrinter {
 
   inputPort TimeInput {
     location: "local"
-    protocol: "sodep"
+    protocol: sodep
     interfaces: TimeServiceAPI
   }
 

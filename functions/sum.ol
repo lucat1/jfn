@@ -11,7 +11,7 @@ service Sum {
 
   inputPort SumInput {
     location: "local"
-    protocol: "sodep"
+    protocol: sodep
     interfaces: SumAPI
   }
 
