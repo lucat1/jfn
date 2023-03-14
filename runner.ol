@@ -4,15 +4,14 @@ from string_utils import StringUtils
 from file import File
 from runtime import Runtime
 from reflection import Reflection
-from .runner import RunnerAPI
 from .function import FunctionAPI
-from .gateway import GatewayInternalAPI
+from .provisioner import ProvisionerAPI
 from .function_catalog import FunctionCatalogAPI
 from .scheduler import SchedulerCallBackInterface
 
 type RunnerParams {
   location: string
-  gatewayInternal: string
+  provisioner: string
   functionCatalog: string
 
   verbose: bool
@@ -58,15 +57,15 @@ service Runner( p : RunnerParams ) {
     interfaces: FunctionCatalogAPI
   }
 
-  outputPort Gateway {
-    location: p.gatewayInternal
-    protocol: sodep
-    interfaces: GatewayInternalAPI
-  }
-
   outputPort Embedded {
     protocol: sodep
     interfaces: FunctionAPI
+  }
+
+  outputPort Provisioner {
+    location: p.provisioner
+    protocol: sodep
+    interfaces: ProvisionerAPI
   }
 
   inputPort RunnerInput {
@@ -90,9 +89,9 @@ service Runner( p : RunnerParams ) {
     }
 
     if(p.verbose) {
-      println@Console("Attaching to gateway at " + p.gatewayInternal)()
+      println@Console("Attaching to provisioner at " + p.provisioner)()
     }
-    register@Gateway({
+    register@Provisioner({
       location = p.location
     })()
 

@@ -1,7 +1,9 @@
 from console import Console
+from string_utils import StringUtils
 from scheduler import Scheduler
 from .jocker import InterfaceAPI
 from .scheduler import SchedulerCallBackInterface
+from .runner import RunnerAPI
 
 type ProvisionerParams {
   location: string
@@ -21,7 +23,7 @@ type RegisterRequest {
 
 interface ProvisionerAPI {
   RequestResponse:
-    register( RegisterRequest )( void )
+    register( RegisterRequest )( void ),
     executor( ExecutorRequest )( ExecutorResponse )
 }
 
@@ -29,6 +31,7 @@ service Provisioner(p : ProvisionerParams ) {
   execution: concurrent
   embed Console as Console
   embed Scheduler as Scheduler
+  embed StringUtils as StringUtils
 
   outputPort Jocker {
     Location: "socket://localhost:8008"
@@ -36,9 +39,14 @@ service Provisioner(p : ProvisionerParams ) {
     Interfaces: InterfaceAPI
   }
 
+  outputPort Runner {
+    protocol: sodep
+    Interfaces: RunnerAPI
+  }
+
   inputPort ProvisionerInput {
     location: p.location
-    protocol: http { format = "json" }
+    protocol: sodep
     interfaces: ProvisionerAPI
   }
 
@@ -48,28 +56,13 @@ service Provisioner(p : ProvisionerParams ) {
   }
 
   define unregister {
-    println@Console("Ping failed, removing runner: #" + i + " (" + global.runners[i] ")")()
+    println@Console("Ping failed, removing runner: #" + i + " (" + global.runners[i] + ")")()
     undef(global.runners[i])
   }
 
   init {
-    global.runners = []
-    global.services = []
-
-    setCronJob@Scheduler({
-      jobName = "load"
-      groupName = "load"
-      cronSpecs << {
-        year = "*"
-        dayOfWeek = "*"
-        month = "*"
-        dayOfMonth = "?"
-        hour = "*"
-        minute = "*"
-        second = "0/10"
-      }
-    })()
-
+    enableTimestamp@Console(true)()
+    global.nextRunner = 0
     setCronJob@Scheduler({
       jobName = "ping"
       groupName = "ping"
@@ -80,7 +73,7 @@ service Provisioner(p : ProvisionerParams ) {
         dayOfMonth = "?"
         hour = "*"
         minute = "*"
-        second = "0/10"
+        second = "*"
       }
     })()
   }
@@ -89,7 +82,7 @@ service Provisioner(p : ProvisionerParams ) {
     [schedulerCallback(request)] {
       if(request.groupName == "ping") {
         spawn(i over #global.runners) in pongs {
-          port = global.runners[i]
+          location = global.runners[i]
           scope(call_runner) {
             install(
               TypeMismatch => {
@@ -108,11 +101,8 @@ service Provisioner(p : ProvisionerParams ) {
               }
             )
 
-            invokeRRUnsafe@Reflection({
-              outputPort = port
-              data = 0
-              operation = "ping"
-            })(pongs)
+            Runner.location = location
+            ping@Runner(0)(pongs)
           }
         }
         for( i = 0, i < #pongs, i++ ){
@@ -127,34 +117,36 @@ service Provisioner(p : ProvisionerParams ) {
     }
 
     [register( request )( ) {
-      name = "port_" +  #global.runners
-      setOutputPort@Runtime({
-        protocol = sodep
-        name = name
-        location = request.location
-      })()
-      println@Console("Registered runner #" + #global.runners)()
-      global.runners[#global.runners] = name
+      println@Console("Registered runner #" + #global.runners + " at " + request.location)()
+      global.runners[#global.runners] = request.location
     }]
 
     [executor( request )( response ) {
+      found = false
       for(i = 0, i < #global.services, i++) {
         service = global.services[i]
         if(service.function == request.function) {
           response.type = "service"
           response.location = service.location
+          found = true
           i = #global.services // break
         }
       }
 
-      for(i = 0, i < #global.runners, i++) {
-        runner = global.services[i]
-        if(runner.function == request.function) {
-          response.type = "runner"
-          response.location = runner.location
-          i = #global.runners // break
+      if(!found) {
+        if(++global.nextRunner >= #global.runners) {
+          global.nextRunner = 0
         }
+        response.type = "runner"
+        response.location = global.runners[global.nextRunner]
+        found = true
       }
+
+      if(!found) {
+        println@Console("TODO: always keep a runner spinning")()
+        response.type = "error"
+        response.location = "error"
+      } 
     }]
   }
 }

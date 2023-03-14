@@ -4,10 +4,11 @@ from string_utils import StringUtils
 from runtime import Runtime
 from reflection import Reflection
 from .runner import RunnerAPI
+from .provisioner import ProvisionerAPI
 
 type GatewayParams {
   location: string
-  internal: string
+  provisioner: string
   
   verbose: bool
 }
@@ -44,7 +45,7 @@ service Gateway( p : GatewayParams ) {
   outputPort Provisioner {
     location: p.provisioner
     protocol: sodep
-    interfaces: RunnerAPI
+    interfaces: ProvisionerAPI
   }
 
   outputPort Runner {
@@ -58,9 +59,17 @@ service Gateway( p : GatewayParams ) {
 
   main {
     [op( request )( response ) {
-      executor@Provisioner({
-        function = request.function
-      })(executor)
+      scope(call_runner) {
+        install(
+          IOException => {
+            response.error = true
+            response.data = "Could not comunicate with the provisioner"
+          }
+        )
+        executor@Provisioner({
+          function = request.name
+        })(executor)
+      }
       if(executor.type == "runner") {
         getRandomUUID@StringUtils()(id)
         scope(call_runner) {
@@ -91,6 +100,8 @@ service Gateway( p : GatewayParams ) {
         response.error = true
         response.data = "Service executor is not handled yet"
       } else {
+                  valueToPrettyString@StringUtils( executor )( t )
+                  println@Console( "executor: " + t )()
         response.error = true
         response.data = "Invalid executor type: " + executor.type
       }
