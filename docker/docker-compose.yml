@@ -1,0 +1,41 @@
+version: "3.9"
+services:
+  jocker:
+    image: jolielang/jocker
+    volumes:
+      - /var/run:/var/run
+
+  function_catalog:
+    image: jfn/function_catalog
+    build: # comment out this line in production
+      context: ..
+      dockerfile: docker/Dockerfile.function_catalog
+    volumes:
+      - ../functions:/data
+
+  provisioner:
+    image: jfn/provisioner
+    build: # comment out this line in production
+      context: ..
+      dockerfile: docker/Dockerfile.provisioner
+    depends_on:
+      - jocker
+
+  gateway:
+    image: jfn/gateway
+    build: # comment out this line in production
+      context: ..
+      dockerfile: docker/Dockerfile.gateway
+    ports:
+      - 8000:8000
+    depends_on:
+      - provisioner
+
+  runner:
+    image: jfn/runner
+    build: # comment out this line in production
+      context: ..
+      dockerfile: docker/Dockerfile.runner
+    depends_on:
+      - provisioner
+      - function_catalog

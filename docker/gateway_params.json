@@ -1,0 +1,5 @@
+{
+  "location": "socket://0.0.0.0:8000",
+  "provisioner": "socket://provisioner:8000",
+  "verbose": true
+}

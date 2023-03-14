@@ -3,9 +3,9 @@ FROM jolielang/jolie:edge-alpine
 WORKDIR /app
 COPY function_catalog.ol function_catalog.ol
 COPY runner.ol runner.ol
-COPY gateway.ol gateway.ol
-COPY docker/gateway_params.json params.json
+COPY provisioner.ol provisioner.ol
+COPY docker/provisioner_params.json params.json
 
 EXPOSE 8000
 
-CMD jolie --params params.json gateway.ol
+CMD jolie --params params.json provisioner.ol

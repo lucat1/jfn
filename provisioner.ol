@@ -147,6 +147,11 @@ service Provisioner(p : ProvisionerParams ) {
         response.type = "error"
         response.location = "error"
       } 
+
+      if(p.verbose) {
+        valueToPrettyString@StringUtils( response )( t )
+        println@Console( "Load balancer target: " + t )()
+      }
     }]
   }
 }

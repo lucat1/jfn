@@ -1,8 +1,10 @@
 FROM jolielang/jolie:edge-alpine
 
+WORKDIR /app
 COPY function_catalog.ol function_catalog.ol
+COPY docker/function_catalog_params.json params.json
 
-EXPOSE 7000
+EXPOSE 6000
 VOLUME /data
 
-CMD jolie function_catalog.ol
+CMD jolie --params params.json function_catalog.ol

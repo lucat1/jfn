@@ -1,10 +1,13 @@
-all: function_catalog gateway runner
+all: function_catalog gateway runner provisioner
 
-function_catalog: Dockerfile.function_catalog ../function_catalog.ol
-	docker buildx build -t jfn/function_catalog -f Dockerfile.function_catalog ..
-
-gateway: Dockerfile.gateway ../gateway.ol ../gateway_params.json
-	docker buildx build -t jfn/gateway -f Dockerfile.gateway ..
-
-runner: Dockerfile.runner ../runner.ol ../runner_params.json
+provisioner: Dockerfile.runner ../runner.ol runner_params.json
 	docker buildx build -t jfn/runner -f Dockerfile.runner ..
+
+gateway: Dockerfile.provisioner ../provisioner.ol provisioner_params.json
+	docker buildx build -t jfn/provisioner -f Dockerfile.provisioner ..
+
+runner: Dockerfile.runner ../runner.ol runner_params.json
+	docker buildx build -t jfn/runner -f Dockerfile.runner ..
+
+function_catalog: Dockerfile.function_catalog ../function_catalog.ol function_catalog_params.json
+	docker buildx build -t jfn/function_catalog -f Dockerfile.function_catalog ..
