@@ -1,4 +1,10 @@
-type SumRequest  { data[0,1]: int }
+from console import Console
+from string_utils import StringUtils
+
+type SumRequest  { data: SumData }
+type SumData {
+  numbers[1,*]: int
+}
 type SumResponse { data: int }
 
 interface SumAPI {
@@ -8,6 +14,8 @@ interface SumAPI {
 
 service Sum {
   execution: single
+  embed Console as Console
+  embed StringUtils as StringUtils
 
   inputPort SumInput {
     location: "local"
@@ -17,7 +25,10 @@ service Sum {
 
   main {
     fn( request )( response ) {
-      response = request[0] + request[1]
+      response.data = 0
+      for( i = 0, i < #request.data.numbers, i++ ) {
+        response.data = response.data + request.data.numbers[i]
+      }
     }
   }
 }

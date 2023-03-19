@@ -88,7 +88,7 @@ service Gateway( p : GatewayParams ) {
           invoke_data << {
             name = request.name
             id = id
-            data = request.data
+            data << request.data
           }
           if(p.verbose) {
             valueToPrettyString@StringUtils( request )( t )
