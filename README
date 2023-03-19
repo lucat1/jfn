@@ -1,0 +1,8 @@
+In order to compile, use:
+
+$ javac -cp "/absolute/path/to/your/jolie.jar" Checksum.java 
+
+Then package the class into a jar and move it to the lib folder:
+
+$ jar cvf checksum.jar Checksum.class
+$ mv checksum.jar ../lib

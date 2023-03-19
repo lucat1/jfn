@@ -1,5 +1,6 @@
 from console import Console
 from file import File
+from .checksum import Checksum
 
 type FunctionCatalogRunner {
   location: string
@@ -35,6 +36,7 @@ service FunctionCatalog( p : FunctionCatalogRunner ) {
   execution: concurrent
   embed Console as Console
   embed File as File
+  embed Checksum as Checksum
 
   inputPort FunctionCatalogInput {
     location: p.location
