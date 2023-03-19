@@ -46,6 +46,7 @@ service FunctionCatalog( p : FunctionCatalogRunner ) {
     enableTimestamp@Console(true)()
     getFileSeparator@File()(sep)
     getServiceDirectory@File()(root)
+    println@Console("Listening on " + p.location)()
   }
 
   main {

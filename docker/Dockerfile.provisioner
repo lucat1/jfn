@@ -1,9 +1,7 @@
 FROM jolielang/jolie:edge-alpine
 
 WORKDIR /app
-COPY function_catalog.ol function_catalog.ol
-COPY runner.ol runner.ol
-COPY provisioner.ol provisioner.ol
+COPY *.ol /app
 COPY docker/provisioner_params.json params.json
 
 EXPOSE 8000

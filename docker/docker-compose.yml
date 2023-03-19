@@ -4,14 +4,18 @@ services:
     image: jolielang/jocker
     volumes:
       - /var/run:/var/run
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
-  function_catalog:
+  catalog:
     image: jfn/function_catalog
     build: # comment out this line in production
       context: ..
       dockerfile: docker/Dockerfile.function_catalog
     volumes:
-      - ../functions:/data
+      - ../functions:/app/functions
 
   provisioner:
     image: jfn/provisioner
@@ -38,4 +42,4 @@ services:
       dockerfile: docker/Dockerfile.runner
     depends_on:
       - provisioner
-      - function_catalog
+      - catalog

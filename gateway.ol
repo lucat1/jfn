@@ -55,6 +55,7 @@ service Gateway( p : GatewayParams ) {
 
   init {
     enableTimestamp@Console(true)()
+    println@Console("Listening on " + p.location)()
   }
 
   main {

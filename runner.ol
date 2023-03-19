@@ -109,6 +109,7 @@ service Runner( p : RunnerParams ) {
         second = "0/10"
       }
     })()
+    println@Console("Listening on " + p.location)()
   }
 
   main {
@@ -195,7 +196,6 @@ service Runner( p : RunnerParams ) {
           )
           Embedded.location = loc
           fn@Embedded(invoke_data)(output)
-          /* println@Console("Run successful")() */
           response.data << output.data
           response.error = false
         }

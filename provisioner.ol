@@ -76,6 +76,7 @@ service Provisioner(p : ProvisionerParams ) {
         second = "*"
       }
     })()
+    println@Console("Listening on " + p.location)()
   }
 
   main {
