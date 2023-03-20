@@ -1,6 +1,6 @@
 interface ChecksumInterface {
   RequestResponse:
-    println( string )( string )
+    sha256( string )( string )
 }
 
 service Checksum {

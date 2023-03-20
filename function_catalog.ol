@@ -8,8 +8,8 @@ type FunctionCatalogRunner {
   verbose: bool
 }
 
-type FunctionCatalogGetRequest  { name: string }
-type FunctionCatalogPutRequest  {
+type FunctionCatalogRequest { name: string }
+type FunctionCatalogPutRequest {
   name: string
   content: string
 }
@@ -20,7 +20,8 @@ type FunctionCatalogResult {
 
 interface FunctionCatalogAPI {
   RequestResponse:
-    get( FunctionCatalogGetRequest )( FunctionCatalogResult ),
+    hash( FunctionCatalogRequest )( string ),
+    get( FunctionCatalogRequest )( FunctionCatalogResult ),
     put( FunctionCatalogPutRequest )( FunctionCatalogResult )
 }
 
@@ -52,6 +53,21 @@ service FunctionCatalog( p : FunctionCatalogRunner ) {
   }
 
   main {
+    [hash( request )( response ) {
+      derive_filename
+      exists@File(filename)(exists)
+      if(p.verbose) {
+        println@Console("Looking for \"" + request.name + "\" in " + filename)()
+      }
+      if(!exists) {
+        response = ""
+      } else {
+        readFile@File({
+          .filename = filename
+        })(content)
+        sha256@Checksum(content)(response)
+      }
+    }]
     [get( request )( response ) {
       derive_filename
       exists@File(filename)(exists)

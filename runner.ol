@@ -39,7 +39,7 @@ constants {
 }
 
 define derive_filename {
-  filename = RUNNER_FUNCTIONS_PATH + sep + request.name + ".ol"
+  filename = RUNNER_FUNCTIONS_PATH + sep + request.name + "-" + hash + ".ol"
 }
 
 service Runner( p : RunnerParams ) {
@@ -95,7 +95,7 @@ service Runner( p : RunnerParams ) {
       location = p.location
     })()
 
-    global.lastPing = false
+    global.lastPing = true
     setCronJob@Scheduler({
       jobName = "ping"
       groupName = "ping"
@@ -130,6 +130,17 @@ service Runner( p : RunnerParams ) {
       if(p.verbose) {
         valueToPrettyString@StringUtils( request )( t )
         println@Console( "Calling: " + t )()
+      }
+      scope(load_service) {
+        install(
+          IOException => {
+            response.error = true
+            response.data = "Could not contact the function catalog (to check the hash)"
+          }
+        )
+        hash@FunctionCatalog({
+          name = request.name
+        })(hash)
       }
       derive_filename
       exists@File(filename)(exists)
@@ -198,6 +209,7 @@ service Runner( p : RunnerParams ) {
           fn@Embedded(invoke_data)(output)
           response.data << output.data
           response.error = false
+          println@Console("Run successful")()
         }
       }
     }]
