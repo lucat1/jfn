@@ -3,7 +3,6 @@ from scheduler import Scheduler
 from string_utils import StringUtils
 from file import File
 from runtime import Runtime
-from reflection import Reflection
 from .function import FunctionAPI
 from .provisioner import ProvisionerAPI
 from .function_catalog import FunctionCatalogAPI
@@ -19,7 +18,6 @@ type RunnerParams {
 
 type RunRequest {
   name: string
-  id: string
   data?: undefined
 }
 
@@ -48,7 +46,6 @@ service Runner( p : RunnerParams ) {
   embed Scheduler as Scheduler
   embed File as File
   embed Runtime as Runtime
-  embed Reflection as Reflection
   embed StringUtils as StringUtils
 
   outputPort FunctionCatalog {
@@ -88,10 +85,9 @@ service Runner( p : RunnerParams ) {
       mkdir@File(RUNNER_FUNCTIONS_PATH)()
     }
 
-    if(p.verbose) {
-      println@Console("Attaching to provisioner at " + p.provisioner)()
-    }
+    println@Console("Attaching to provisioner at " + p.provisioner)()
     register@Provisioner({
+      type = "runner"
       location = p.location
     })()
 
@@ -197,7 +193,6 @@ service Runner( p : RunnerParams ) {
         }
         invoke_data << request
         undef(invoke_data.name)
-        undef(invoke_data.id)
         scope(call_service) {
           install(
             InvocationFault => {

@@ -18,13 +18,20 @@ type ExecutorResponse {
 }
 
 type RegisterRequest {
+  type: string
   location: string
+  function?: string
 }
 
 interface ProvisionerAPI {
   RequestResponse:
     register( RegisterRequest )( void ),
     executor( ExecutorRequest )( ExecutorResponse )
+}
+
+interface ExecutorAPI {
+  RequestResponse:
+    ping( int )( int ),
 }
 
 service Provisioner(p : ProvisionerParams ) {
@@ -39,9 +46,9 @@ service Provisioner(p : ProvisionerParams ) {
     Interfaces: InterfaceAPI
   }
 
-  outputPort Runner {
+  outputPort Executor {
     protocol: sodep
-    Interfaces: RunnerAPI
+    Interfaces: ExecutorAPI
   }
 
   inputPort ProvisionerInput {
@@ -56,8 +63,8 @@ service Provisioner(p : ProvisionerParams ) {
   }
 
   define unregister {
-    println@Console("Ping failed, removing runner: #" + i + " (" + global.runners[i] + ")")()
-    undef(global.runners[i])
+    println@Console("Ping failed, removing executor: #" + i + " (type: " + global.executors[i].type + ", location: " + global.executors[i].location + ")")()
+    undef(global.executors[i])
   }
 
   init {
@@ -82,8 +89,7 @@ service Provisioner(p : ProvisionerParams ) {
   main {
     [schedulerCallback(request)] {
       if(request.groupName == "ping") {
-        spawn(i over #global.runners) in pongs {
-          location = global.runners[i]
+        spawn(i over #global.executors) in pongs {
           scope(call_runner) {
             install(
               TypeMismatch => {
@@ -102,8 +108,8 @@ service Provisioner(p : ProvisionerParams ) {
               }
             )
 
-            Runner.location = location
-            ping@Runner(0)(pongs)
+            Executor.location = global.executors[i].location
+            ping@Executor(0)(pongs)
           }
         }
         for( i = 0, i < #pongs, i++ ){
@@ -118,8 +124,8 @@ service Provisioner(p : ProvisionerParams ) {
     }
 
     [register( request )( ) {
-      println@Console("Registered runner #" + #global.runners + " at " + request.location)()
-      global.runners[#global.runners] = request.location
+      println@Console("Registered " + request.type + " #" + #global.executors + " at " + request.location)()
+      global.executors[#global.executors] << request
     }]
 
     [executor( request )( response ) {
@@ -135,11 +141,11 @@ service Provisioner(p : ProvisionerParams ) {
       }
 
       if(!found) {
-        if(++global.nextRunner >= #global.runners) {
+        if(++global.nextRunner >= #global.executors) {
           global.nextRunner = 0
         }
         response.type = "runner"
-        response.location = global.runners[global.nextRunner]
+        response.location = global.executors[global.nextRunner].location
         found = true
       }
 

@@ -72,7 +72,6 @@ service Gateway( p : GatewayParams ) {
         })(executor)
       }
       if(executor.type == "runner") {
-        getRandomUUID@StringUtils()(id)
         scope(call_runner) {
           install(
             TypeMismatch => {
@@ -87,7 +86,6 @@ service Gateway( p : GatewayParams ) {
 
           invoke_data << {
             name = request.name
-            id = id
             data << request.data
           }
           if(p.verbose) {
