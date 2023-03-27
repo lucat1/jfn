@@ -20,6 +20,7 @@ type ExecutorResponse {
 type RegisterRequest {
   type: string
   location: string
+  ping: string
   function?: string
 }
 
@@ -69,7 +70,7 @@ service Provisioner(p : ProvisionerParams ) {
 
   init {
     enableTimestamp@Console(true)()
-    global.nextRunner = 0
+    global.nextExecutor = 0
     setCronJob@Scheduler({
       jobName = "ping"
       groupName = "ping"
@@ -108,7 +109,7 @@ service Provisioner(p : ProvisionerParams ) {
               }
             )
 
-            Executor.location = global.executors[i].location
+            Executor.location = global.executors[i].ping
             ping@Executor(0)(pongs)
           }
         }
@@ -130,30 +131,34 @@ service Provisioner(p : ProvisionerParams ) {
 
     [executor( request )( response ) {
       found = false
-      for(i = 0, i < #global.services, i++) {
-        service = global.services[i]
-        if(service.function == request.function) {
-          response.type = "service"
-          response.location = service.location
+      for(i = 0, i < #global.executors && !found, i++) {
+        executor << global.executors[i]
+        if(executor.type == "singleton" && executor.function == request.function) {
+          response << executor
+          undef(response.ping)
+          undef(response.function)
           found = true
-          i = #global.services // break
         }
       }
 
       if(!found) {
-        if(++global.nextRunner >= #global.executors) {
-          global.nextRunner = 0
+        for(i = global.nextExecutor, i < #global.executors, i++) {
+          if(global.executors[i].type == "runner") {
+            global.nextExecutor = i = #global.executors // break
+            found = true
+          }
         }
-        response.type = "runner"
-        response.location = global.executors[global.nextRunner].location
-        found = true
+        if(found) {
+          response << global.executors[global.nextExecutor]
+          global.nextExecutor++
+        }
       }
 
       if(!found) {
         println@Console("TODO: always keep a runner spinning")()
         response.type = "error"
         response.location = "error"
-      } 
+      }
 
       if(p.verbose) {
         valueToPrettyString@StringUtils( response )( t )

@@ -76,16 +76,16 @@ service Singleton( p : SingletonParams ) {
 
     println@Console("Downloading function: " + p.function)()
     get@FunctionCatalog({
-      name = request.function
+      name = p.function
     })(code)
-    if(response.error) {
-      println@Console("Could not find function \"" + p.function + "\" in the catalog. Error: " + code.error)
+    if(code.error) {
+      println@Console("Could not find function \"" + p.function + "\" in the catalog. Error: " + code.error)()
       exit
     }
     writeFile@File({
       filename = SINGLETON_FUNCTION_PATH
       format = "text"
-      content = code.content
+      content = code.data
     })()
 
     println@Console("Embedding " + SINGLETON_FUNCTION_PATH)()
@@ -98,7 +98,8 @@ service Singleton( p : SingletonParams ) {
     println@Console("Attaching to provisioner at " + p.provisioner)()
     register@Provisioner({
       type = "singleton"
-      location = p.location
+      ping = p.location
+      location = p.location + "/!/Fn"
       function = p.function
     })()
 
@@ -119,16 +120,18 @@ service Singleton( p : SingletonParams ) {
     println@Console("Listening on " + p.location)()
   }
 
-  [ping( request )( response ) {
-    response = request
-    global.lastPing = true
-  }]
+  main {
+    [ping( request )( response ) {
+      response = request
+      global.lastPing = true
+    }]
 
-  [schedulerCallback(request)] {
-    if(!global.lastPing) {
-      println@Console("Didn't receive a ping for more than 10 seconds, assuming the gateway is dead. Quitting")()
-      exit
+    [schedulerCallback(request)] {
+      if(!global.lastPing) {
+        println@Console("Didn't receive a ping for more than 10 seconds, assuming the provisioner is dead. Quitting")()
+        exit
+      }
+      global.lastPing = false
     }
-    global.lastPing = false
   }
 }

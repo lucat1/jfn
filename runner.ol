@@ -88,6 +88,7 @@ service Runner( p : RunnerParams ) {
     println@Console("Attaching to provisioner at " + p.provisioner)()
     register@Provisioner({
       type = "runner"
+      ping = p.location
       location = p.location
     })()
 
@@ -116,7 +117,7 @@ service Runner( p : RunnerParams ) {
 
     [schedulerCallback(request)] {
       if(!global.lastPing) {
-        println@Console("Didn't receive a ping for more than 10 seconds, assuming the gateway is dead. Quitting")()
+        println@Console("Didn't receive a ping for more than 10 seconds, assuming the provisioner is dead. Quitting")()
         exit
       }
       global.lastPing = false

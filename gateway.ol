@@ -4,6 +4,7 @@ from string_utils import StringUtils
 from runtime import Runtime
 from reflection import Reflection
 from .runner import RunnerAPI
+from .function import FunctionAPI
 from .provisioner import ProvisionerAPI
 
 type GatewayParams {
@@ -53,6 +54,11 @@ service Gateway( p : GatewayParams ) {
     interfaces: RunnerAPI
   }
 
+  outputPort Singleton {
+    protocol: sodep
+    interfaces: FunctionAPI
+  }
+
   init {
     enableTimestamp@Console(true)()
     println@Console("Listening on " + p.location)()
@@ -95,12 +101,33 @@ service Gateway( p : GatewayParams ) {
           Runner.location = executor.location
           run@Runner(invoke_data)(response)
         }
-      } else if(executor.type == "service") {
-        response.error = true
-        response.data = "Service executor is not handled yet"
+      } else if(executor.type == "singleton") {
+        scope(call_singleton) {
+          install(
+            TypeMismatch => {
+              response.error = true
+              response.data = "Error while calling the function: " + call_singleton.TypeMismatch
+            },
+            InvocationFault => {
+              response.error = true
+              response.data = "Could not invoke singleton: " + call_singleton.InvocationFault
+            }
+          )
+
+          invoke_data << {
+            data << request.data
+          }
+          if(p.verbose) {
+            valueToPrettyString@StringUtils( request )( t )
+            println@Console( "Sending to singleton at " + executor.location)()
+          }
+          Singleton.location = executor.location
+          fn@Singleton(invoke_data)(response)
+          response.error = false
+        }
       } else {
-                  valueToPrettyString@StringUtils( executor )( t )
-                  println@Console( "executor: " + t )()
+        valueToPrettyString@StringUtils( executor )( t )
+        println@Console( "executor: " + t )()
         response.error = true
         response.data = "Invalid executor type: " + executor.type
       }
