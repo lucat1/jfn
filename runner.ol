@@ -8,14 +8,6 @@ from .provisioner import ProvisionerAPI
 from .function_catalog import FunctionCatalogAPI
 from .scheduler import SchedulerCallBackInterface
 
-type RunnerParams {
-  location: string
-  provisioner: string
-  functionCatalog: string
-
-  verbose: bool
-}
-
 type RunRequest {
   name: string
   data?: undefined
@@ -40,7 +32,7 @@ define derive_filename {
   filename = RUNNER_FUNCTIONS_PATH + sep + request.name + "-" + hash + ".ol"
 }
 
-service Runner( p : RunnerParams ) {
+service Runner {
   execution: concurrent
   embed Console as Console
   embed Scheduler as Scheduler
@@ -49,7 +41,6 @@ service Runner( p : RunnerParams ) {
   embed StringUtils as StringUtils
 
   outputPort FunctionCatalog {
-    location: p.functionCatalog
     protocol: sodep
     interfaces: FunctionCatalogAPI
   }
@@ -60,13 +51,12 @@ service Runner( p : RunnerParams ) {
   }
 
   outputPort Provisioner {
-    location: p.provisioner
     protocol: sodep
     interfaces: ProvisionerAPI
   }
 
   inputPort RunnerInput {
-    location: p.location
+    location: "socket://0.0.0.0:8010"
     protocol: sodep
     interfaces: RunnerAPI
   }
@@ -77,6 +67,11 @@ service Runner( p : RunnerParams ) {
   }
 
   init {
+    getenv@Runtime( "FUNCTION_CATALOG_LOCATION" )( FunctionCatalog.location )
+    getenv@Runtime( "PROVISIONER_LOCATION" )( Provisioner.location )
+    getenv@Runtime( "RUNNER_LOCATION" )( RunnerInput.location )
+    getenv@Runtime( "VERBOSE" )( global.verbose )
+
     enableTimestamp@Console(true)()
     getFileSeparator@File()(sep)
 
@@ -85,11 +80,11 @@ service Runner( p : RunnerParams ) {
       mkdir@File(RUNNER_FUNCTIONS_PATH)()
     }
 
-    println@Console("Attaching to provisioner at " + p.provisioner)()
+    println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "runner"
-      ping = p.location
-      location = p.location
+      ping = RunnerInput.location
+      location = RunnerInput.location
     })()
 
     global.lastPing = true
@@ -106,7 +101,7 @@ service Runner( p : RunnerParams ) {
         second = "0/10"
       }
     })()
-    println@Console("Listening on " + p.location)()
+    println@Console("Listening on " + RunnerInput.location)()
   }
 
   main {
@@ -124,7 +119,7 @@ service Runner( p : RunnerParams ) {
     }
 
     [run( request )( response ) {
-      if(p.verbose) {
+      if(global.verbose) {
         valueToPrettyString@StringUtils( request )( t )
         println@Console( "Calling: " + t )()
       }
@@ -141,7 +136,6 @@ service Runner( p : RunnerParams ) {
       }
       derive_filename
       exists@File(filename)(exists)
-      // TODO: use the function name + the hash of the contents as a file name
       if(!exists) {
         scope(load_service) {
           install(
@@ -173,7 +167,7 @@ service Runner( p : RunnerParams ) {
               format = "text"
               content = content
             })()
-            if(p.verbose) {
+            if(global.verbose) {
               println@Console("Wrote function to " + filename)()
             }
           }

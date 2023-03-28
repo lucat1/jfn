@@ -125,7 +125,8 @@ service Provisioner(p : ProvisionerParams ) {
     }
 
     [register( request )( ) {
-      println@Console("Registered " + request.type + " #" + #global.executors + " at " + request.location)()
+      valueToPrettyString@StringUtils( request )( t )
+      println@Console("Registered " + request.type + " #" + #global.executors + ": " + t)()
       global.executors[#global.executors] << request
     }]
 
@@ -141,21 +142,18 @@ service Provisioner(p : ProvisionerParams ) {
         }
       }
 
-      if(!found) {
-        for(i = global.nextExecutor, i < #global.executors, i++) {
-          if(global.executors[i].type == "runner") {
-            global.nextExecutor = i = #global.executors // break
-            found = true
-          }
-        }
-        if(found) {
-          response << global.executors[global.nextExecutor]
-          global.nextExecutor++
+    for(i = global.nextExecutor, i < #global.executors && !found, i++) {
+        executor << global.executors[i]
+        if(executor.type == "runner") {
+          response << executor
+          undef(response.ping)
+          global.nextExecutor = i + 1
+          found = true
         }
       }
 
       if(!found) {
-        println@Console("TODO: always keep a runner spinning")()
+        println@Console("No singleton or runner to execute the job onto!")()
         response.type = "error"
         response.location = "error"
       }

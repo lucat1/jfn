@@ -8,6 +8,7 @@ checksum: lib Checksum.java
 	mv jfn/Checksum.class .
 	rm -d jfn
 	mv checksum.jar lib/checksum.jar
+	rm Checksum.class
 
 lib:
 	mkdir lib

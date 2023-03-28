@@ -1,6 +1,0 @@
-{
-  "location": "socket://runner:8010",
-  "provisioner": "socket://provisioner:8000",
-  "functionCatalog": "socket://catalog:6000",
-  "verbose": true
-}
