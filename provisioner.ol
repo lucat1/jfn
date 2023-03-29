@@ -1,15 +1,10 @@
 from console import Console
+from runtime import Runtime
 from string_utils import StringUtils
 from scheduler import Scheduler
-from .jocker import InterfaceAPI
 from .scheduler import SchedulerCallBackInterface
 from .runner import RunnerAPI
-
-type ProvisionerParams {
-  location: string
-
-  verbose: bool
-}
+from .spawner import Spawner
 
 type ExecutorRequest { function: string }
 type ExecutorResponse {
@@ -35,17 +30,13 @@ interface ExecutorAPI {
     ping( int )( int ),
 }
 
-service Provisioner(p : ProvisionerParams ) {
+service Provisioner {
   execution: concurrent
   embed Console as Console
+  embed Runtime as Runtime
   embed Scheduler as Scheduler
   embed StringUtils as StringUtils
-
-  outputPort Jocker {
-    Location: "socket://localhost:8008"
-    protocol: sodep
-    Interfaces: InterfaceAPI
-  }
+  embed Spawner as Spawner
 
   outputPort Executor {
     protocol: sodep
@@ -53,7 +44,7 @@ service Provisioner(p : ProvisionerParams ) {
   }
 
   inputPort ProvisionerInput {
-    location: p.location
+    location: "socket://localhost:8060"
     protocol: sodep
     interfaces: ProvisionerAPI
   }
@@ -69,6 +60,9 @@ service Provisioner(p : ProvisionerParams ) {
   }
 
   init {
+    getenv@Runtime( "PROVISIONER_LOCATION" )( ProvisionerInput.location )
+    getenv@Runtime( "VERBOSE" )( global.verbose )
+
     enableTimestamp@Console(true)()
     global.nextExecutor = 0
     setCronJob@Scheduler({
@@ -84,7 +78,12 @@ service Provisioner(p : ProvisionerParams ) {
         second = "*"
       }
     })()
-    println@Console("Listening on " + p.location)()
+    println@Console("Listening on " + ProvisionerInput.location)()
+
+    // always keep at least one runner available
+    spawnRunner@Spawner({
+      name = "runner_" + #global.executors
+    })()
   }
 
   main {
@@ -146,7 +145,6 @@ service Provisioner(p : ProvisionerParams ) {
         executor << global.executors[i]
         if(executor.type == "runner") {
           response << executor
-          undef(response.ping)
           global.nextExecutor = i + 1
           found = true
         }

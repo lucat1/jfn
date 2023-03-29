@@ -2,8 +2,8 @@ FROM jolielang/jolie:edge-alpine
 
 WORKDIR /app
 COPY *.ol /app
-COPY docker/provisioner_params.json params.json
 
 EXPOSE 8000
+ENV DEBUG false
 
-CMD jolie --params params.json provisioner.ol
+CMD jolie provisioner.ol

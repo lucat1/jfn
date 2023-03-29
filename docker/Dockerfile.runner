@@ -4,9 +4,6 @@ WORKDIR /app
 COPY *.ol /app
 
 EXPOSE 8010
-ENV RUNNER_LOCATION socket://runner:8010
-ENV PROVISIONER_LOCATION socket://provisioner:8000
-ENV FUNCTION_CATALOG_LOCATION socket://catalog:6000
-ENV VERBOSE true
+ENV VERBOSE false
 
 CMD jolie runner.ol
