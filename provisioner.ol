@@ -4,7 +4,6 @@ from string_utils import StringUtils
 from scheduler import Scheduler
 from .scheduler import SchedulerCallBackInterface
 from .runner import RunnerAPI
-from .spawner import Spawner
 
 type ExecutorRequest { function: string }
 type ExecutorResponse {
@@ -36,7 +35,6 @@ service Provisioner {
   embed Runtime as Runtime
   embed Scheduler as Scheduler
   embed StringUtils as StringUtils
-  embed Spawner as Spawner
 
   outputPort Executor {
     protocol: sodep
@@ -44,7 +42,7 @@ service Provisioner {
   }
 
   inputPort ProvisionerInput {
-    location: "socket://localhost:8060"
+    location: "socket://0.0.0.0:6001"
     protocol: sodep
     interfaces: ProvisionerAPI
   }
@@ -54,14 +52,23 @@ service Provisioner {
     interfaces: SchedulerCallBackInterface
   }
 
+  // round-robin
+  define rr {
+    if(global.nextExecutor >= #global.executors) {
+      global.nextExecutor = 0
+    }
+  }
+
   define unregister {
     println@Console("Ping failed, removing executor: #" + i + " (type: " + global.executors[i].type + ", location: " + global.executors[i].location + ")")()
     undef(global.executors[i])
+    rr
   }
 
   init {
     getenv@Runtime( "PROVISIONER_LOCATION" )( ProvisionerInput.location )
     getenv@Runtime( "VERBOSE" )( global.verbose )
+    getenv@Runtime( "DEBUG" )( global.debug )
 
     enableTimestamp@Console(true)()
     global.nextExecutor = 0
@@ -79,11 +86,6 @@ service Provisioner {
       }
     })()
     println@Console("Listening on " + ProvisionerInput.location)()
-
-    // always keep at least one runner available
-    spawnRunner@Spawner({
-      name = "runner_" + #global.executors
-    })()
   }
 
   main {
@@ -93,14 +95,14 @@ service Provisioner {
           scope(call_runner) {
             install(
               TypeMismatch => {
-                if(p.verbose) {
+                if(global.verbose) {
                   valueToPrettyString@StringUtils( call_runner.TypeMismatch )( t )
                   println@Console( "Ping error: " + t )()
                 }
                 unregister
               },
               InvocationFault => {
-                if(p.verbose) {
+                if(global.verbose) {
                   valueToPrettyString@StringUtils( call_runner.InvocationFault )( t )
                   println@Console( "Ping error: " + t )()
                 }
@@ -109,12 +111,20 @@ service Provisioner {
             )
 
             Executor.location = global.executors[i].ping
+            if(global.debug) {
+              println@Console("Pinging " + Executor.location)()
+            }
+            pongs = -1
             ping@Executor(0)(pongs)
           }
         }
+        if(global.debug) {
+          valueToPrettyString@StringUtils( pongs )( t )
+          println@Console( "Pongs: " + t )()
+        }
         for( i = 0, i < #pongs, i++ ){
           if(pongs[i] != 0) {
-            if(p.verbose) {
+            if(global.verbose) {
               println@Console( "Ping didn't return 0: " + pongs[i] )()
             }
             unregister
@@ -125,7 +135,7 @@ service Provisioner {
 
     [register( request )( ) {
       valueToPrettyString@StringUtils( request )( t )
-      println@Console("Registered " + request.type + " #" + #global.executors + ": " + t)()
+      println@Console("Registered executor #" + #global.executors + ": " + t)()
       global.executors[#global.executors] << request
     }]
 
@@ -135,13 +145,11 @@ service Provisioner {
         executor << global.executors[i]
         if(executor.type == "singleton" && executor.function == request.function) {
           response << executor
-          undef(response.ping)
-          undef(response.function)
           found = true
         }
       }
 
-    for(i = global.nextExecutor, i < #global.executors && !found, i++) {
+      for(i = global.nextExecutor, i < #global.executors && !found, i++) {
         executor << global.executors[i]
         if(executor.type == "runner") {
           response << executor
@@ -149,14 +157,18 @@ service Provisioner {
           found = true
         }
       }
+      rr
 
       if(!found) {
         println@Console("No singleton or runner to execute the job onto!")()
         response.type = "error"
         response.location = "error"
+      } else {
+        undef(response.ping)
+        undef(response.function)
       }
 
-      if(p.verbose) {
+      if(global.verbose) {
         valueToPrettyString@StringUtils( response )( t )
         println@Console( "Load balancer target: " + t )()
       }

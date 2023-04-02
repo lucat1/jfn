@@ -56,7 +56,7 @@ service Runner {
   }
 
   inputPort RunnerInput {
-    location: "socket://0.0.0.0:8010"
+    location: "socket://0.0.0.0:6004"
     protocol: sodep
     interfaces: RunnerAPI
   }
@@ -71,6 +71,7 @@ service Runner {
     getenv@Runtime( "PROVISIONER_LOCATION" )( Provisioner.location )
     getenv@Runtime( "RUNNER_LOCATION" )( RunnerInput.location )
     getenv@Runtime( "VERBOSE" )( global.verbose )
+    getenv@Runtime( "DEBUG" )( global.debug )
 
     enableTimestamp@Console(true)()
     getFileSeparator@File()(sep)
@@ -107,6 +108,9 @@ service Runner {
   main {
     [ping( request )( response ) {
       response = request
+      if(global.debug) {
+        println@Console("Received a ping, sending pong")()
+      }
       global.lastPing = true
     }]
 
@@ -119,7 +123,7 @@ service Runner {
     }
 
     [run( request )( response ) {
-      if(global.verbose) {
+      if(global.debug) {
         valueToPrettyString@StringUtils( request )( t )
         println@Console( "Calling: " + t )()
       }
@@ -199,7 +203,9 @@ service Runner {
           fn@Embedded(invoke_data)(output)
           response.data << output.data
           response.error = false
-          println@Console("Run successful")()
+          if(global.debug) {
+            println@Console("Run successful")()
+          }
         }
       }
     }]

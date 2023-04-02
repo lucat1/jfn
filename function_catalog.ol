@@ -36,7 +36,7 @@ service FunctionCatalog {
   embed Checksum as Checksum
 
   inputPort FunctionCatalogInput {
-    location: "socket://0.0.0.0:7000"
+    location: "socket://0.0.0.0:6002"
     protocol: sodep
     interfaces: FunctionCatalogAPI
   }

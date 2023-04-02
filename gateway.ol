@@ -31,7 +31,7 @@ service Gateway {
   embed Reflection as Reflection
 
   inputPort GatewayInput {
-    location: "socket://0.0.0.0:8000"
+    location: "socket://0.0.0.0:6005"
     protocol: http { format = "json" }
     interfaces: GatewayAPI
   }
@@ -90,7 +90,7 @@ service Gateway {
             name = request.name
             data << request.data
           }
-          if(global.verbose) {
+          if(global.debug) {
             valueToPrettyString@StringUtils( request )( t )
             println@Console( "Sending to runner at " + executor.location)()
           }
@@ -113,7 +113,7 @@ service Gateway {
           invoke_data << {
             data << request.data
           }
-          if(global.verbose) {
+          if(global.debug) {
             valueToPrettyString@StringUtils( request )( t )
             println@Console( "Sending to singleton at " + executor.location)()
           }
@@ -121,6 +121,9 @@ service Gateway {
           fn@Singleton(invoke_data)(response)
           response.error = false
         }
+      } else if(executor.type == "error") {
+        response.error = true
+        response.data = "Provisioner-level error. Possibly, no executor was found."
       } else {
         valueToPrettyString@StringUtils( executor )( t )
         println@Console( "executor: " + t )()

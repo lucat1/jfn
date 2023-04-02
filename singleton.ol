@@ -44,13 +44,12 @@ service Singleton {
   }
 
   outputPort Provisioner {
-    location: p.provisioner
     protocol: sodep
     interfaces: ProvisionerAPI
   }
 
   inputPort SingletonInput {
-    location: p.location
+    location: "socket://localhost:6004"
     protocol: sodep
     interfaces: SingletonAPI
     redirects:
@@ -91,11 +90,11 @@ service Singleton {
     })(loc)
     Embedded.location = loc
 
-    println@Console("Attaching to provisioner at " + p.provisioner)()
+    println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "singleton"
-      ping = p.location
-      location = p.location + "/!/Fn"
+      ping = SingletonInput.location
+      location = SingletonInput.location + "/!/Fn"
       function = global.function
     })()
 
@@ -113,7 +112,7 @@ service Singleton {
         second = "0/10"
       }
     })()
-    println@Console("Listening on " + p.location)()
+    println@Console("Listening on " + SingletonInput.location)()
   }
 
   main {

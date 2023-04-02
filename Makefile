@@ -3,8 +3,12 @@
 PROVISIONER_LOCATION = socket://localhost:6001
 FUNCTION_CATALOG_LOCATION = socket://localhost:6002
 RUNNER_LOCATION = socket://localhost:6003
-GATEWAY_LOCATION = socket://localhost:6004
+SINGLETON_LOCATION = socket://localhost:6004
+GATEWAY_LOCATION = socket://localhost:6005
 VERBOSE = true
+DEBUG = false
+# For the singleton service
+FUNCTION = hello
 
 all: checksum
 
@@ -28,7 +32,10 @@ provisioner:
 	jolie provisioner.ol
 
 runner:
-	jolie provisioner.ol
+	jolie runner.ol
+
+singleton:
+	jolie singleton.ol
 
 gateway:
-	jolie provisioner.ol
+	jolie gateway.ol
