@@ -5,7 +5,6 @@ RUN apk add --no-cache openjdk11
 
 COPY *.ol /app
 COPY docker/function_catalog_params.json params.json
-COPY Checksum.java /app/jfn/Checksum.java
 
 RUN javac -cp /usr/lib/jolie/jolie.jar jfn/Checksum.java
 RUN jar cvf checksum.jar jfn/Checksum.class
@@ -14,6 +13,7 @@ RUN mkdir lib && mv checksum.jar lib/checksum.jar
 RUN apk del openjdk11
 
 EXPOSE 6000
+ENV VERBOSE false
 VOLUME /data
 
-CMD jolie --params params.json function_catalog.ol
+CMD jolie function_catalog.ol

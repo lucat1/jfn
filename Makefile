@@ -1,3 +1,11 @@
+.EXPORT_ALL_VARIABLES:
+
+PROVISIONER_LOCATION = socket://localhost:6001
+FUNCTION_CATALOG_LOCATION = socket://localhost:6002
+RUNNER_LOCATION = socket://localhost:6003
+GATEWAY_LOCATION = socket://localhost:6004
+VERBOSE = true
+
 all: checksum
 
 checksum: lib Checksum.java
@@ -12,3 +20,15 @@ checksum: lib Checksum.java
 
 lib:
 	mkdir lib
+
+function_catalog:
+	jolie function_catalog.ol
+
+provisioner:
+	jolie provisioner.ol
+
+runner:
+	jolie provisioner.ol
+
+gateway:
+	jolie provisioner.ol

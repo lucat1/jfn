@@ -7,15 +7,6 @@ from .provisioner import ProvisionerAPI
 from .function_catalog import FunctionCatalogAPI
 from .scheduler import SchedulerCallBackInterface
 
-type SingletonParams {
-  location: string
-  provisioner: string
-  functionCatalog: string
-  function: string
-
-  verbose: bool
-}
-
 type RunRequest {
   data?: undefined
 }
@@ -34,7 +25,7 @@ constants {
   SINGLETON_FUNCTION_PATH = "/tmp/fn.ol",
 }
 
-service Singleton( p : SingletonParams ) {
+service Singleton {
   execution: concurrent
   embed Console as Console
   embed Scheduler as Scheduler
@@ -42,7 +33,7 @@ service Singleton( p : SingletonParams ) {
   embed Runtime as Runtime
 
   outputPort FunctionCatalog {
-    location: p.functionCatalog
+    location: global.functionCatalog
     protocol: sodep
     interfaces: FunctionCatalogAPI
   }
@@ -72,14 +63,19 @@ service Singleton( p : SingletonParams ) {
   }
 
   init {
+    getenv@Runtime( "SINGLETON_LOCATION" )( SingletonInput.location )
+    getenv@Runtime( "PROVISIONER_LOCATION" )( Provisioner.location )
+    getenv@Runtime( "FUNCTION_CATALOG_LOCATION" )( FunctionCatalog.location )
+    getenv@Runtime( "FUNCTION" )( global.function )
+
     enableTimestamp@Console(true)()
 
-    println@Console("Downloading function: " + p.function)()
+    println@Console("Downloading function: " + global.function)()
     get@FunctionCatalog({
-      name = p.function
+      name = global.function
     })(code)
     if(code.error) {
-      println@Console("Could not find function \"" + p.function + "\" in the catalog. Error: " + code.error)()
+      println@Console("Could not find function \"" + global.function + "\" in the catalog. Error: " + code.error)()
       exit
     }
     writeFile@File({
@@ -100,7 +96,7 @@ service Singleton( p : SingletonParams ) {
       type = "singleton"
       ping = p.location
       location = p.location + "/!/Fn"
-      function = p.function
+      function = global.function
     })()
 
     global.lastPing = true

@@ -2,8 +2,8 @@ FROM jolielang/jolie:edge-alpine
 
 WORKDIR /app
 COPY *.ol /app
-COPY docker/gateway_params.json params.json
 
 EXPOSE 8000
+ENV VERBOSE false
 
-CMD jolie --params params.json gateway.ol
+CMD jolie gateway.ol
