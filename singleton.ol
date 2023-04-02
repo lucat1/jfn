@@ -7,6 +7,10 @@ from .provisioner import ProvisionerAPI
 from .function_catalog import FunctionCatalogAPI
 from .scheduler import SchedulerCallBackInterface
 
+type SingletonParams {
+  location: string
+}
+
 type RunRequest {
   data?: undefined
 }
@@ -25,7 +29,7 @@ constants {
   SINGLETON_FUNCTION_PATH = "/tmp/fn.ol",
 }
 
-service Singleton {
+service Singleton( p : SingletonParams) {
   execution: concurrent
   embed Console as Console
   embed Scheduler as Scheduler
@@ -49,7 +53,7 @@ service Singleton {
   }
 
   inputPort SingletonInput {
-    location: "socket://localhost:6004"
+    location: p.location
     protocol: sodep
     interfaces: SingletonAPI
     redirects:
@@ -62,7 +66,7 @@ service Singleton {
   }
 
   init {
-    getenv@Runtime( "SINGLETON_LOCATION" )( SingletonInput.location )
+    getenv@Runtime( "SINGLETON_LOCATION" )( p.location )
     getenv@Runtime( "PROVISIONER_LOCATION" )( Provisioner.location )
     getenv@Runtime( "FUNCTION_CATALOG_LOCATION" )( FunctionCatalog.location )
     getenv@Runtime( "FUNCTION" )( global.function )
@@ -93,8 +97,8 @@ service Singleton {
     println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "singleton"
-      ping = SingletonInput.location
-      location = SingletonInput.location + "/!/Fn"
+      ping = p.location
+      location = p.location + "/!/Fn"
       function = global.function
     })()
 
@@ -112,7 +116,7 @@ service Singleton {
         second = "0/10"
       }
     })()
-    println@Console("Listening on " + SingletonInput.location)()
+    println@Console("Listening on " + p.location)()
   }
 
   main {

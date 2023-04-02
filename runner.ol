@@ -8,6 +8,10 @@ from .provisioner import ProvisionerAPI
 from .function_catalog import FunctionCatalogAPI
 from .scheduler import SchedulerCallBackInterface
 
+type RunnerParams {
+  location: string
+}
+
 type RunRequest {
   name: string
   data?: undefined
@@ -32,7 +36,7 @@ define derive_filename {
   filename = RUNNER_FUNCTIONS_PATH + sep + request.name + "-" + hash + ".ol"
 }
 
-service Runner {
+service Runner( p : RunnerParams ) {
   execution: concurrent
   embed Console as Console
   embed Scheduler as Scheduler
@@ -56,7 +60,7 @@ service Runner {
   }
 
   inputPort RunnerInput {
-    location: "socket://0.0.0.0:6004"
+    location: p.location
     protocol: sodep
     interfaces: RunnerAPI
   }
@@ -69,7 +73,6 @@ service Runner {
   init {
     getenv@Runtime( "FUNCTION_CATALOG_LOCATION" )( FunctionCatalog.location )
     getenv@Runtime( "PROVISIONER_LOCATION" )( Provisioner.location )
-    getenv@Runtime( "RUNNER_LOCATION" )( RunnerInput.location )
     getenv@Runtime( "VERBOSE" )( global.verbose )
     getenv@Runtime( "DEBUG" )( global.debug )
 
@@ -84,8 +87,8 @@ service Runner {
     println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "runner"
-      ping = RunnerInput.location
-      location = RunnerInput.location
+      ping = p.location
+      location = p.location
     })()
 
     global.lastPing = true
@@ -102,7 +105,7 @@ service Runner {
         second = "0/10"
       }
     })()
-    println@Console("Listening on " + RunnerInput.location)()
+    println@Console("Listening on " + p.location)()
   }
 
   main {

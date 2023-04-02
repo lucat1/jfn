@@ -158,6 +158,17 @@ service Provisioner {
         }
       }
       rr
+      // if not found with the round robin strategy, try all available options
+      if(!found) {
+        for(i = 0, i < #global.executors && !found, i++) {
+          executor << global.executors[i]
+          if(executor.type == "runner") {
+            response << executor
+            global.nextExecutor = i + 1
+            found = true
+          }
+        }
+      }
 
       if(!found) {
         println@Console("No singleton or runner to execute the job onto!")()

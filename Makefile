@@ -1,9 +1,10 @@
+RUNNER_LOCATION := socket://localhost:6003
+SINGLETON_LOCATION := socket://localhost:6004
+
 .EXPORT_ALL_VARIABLES:
 
 PROVISIONER_LOCATION = socket://localhost:6001
 FUNCTION_CATALOG_LOCATION = socket://localhost:6002
-RUNNER_LOCATION = socket://localhost:6003
-SINGLETON_LOCATION = socket://localhost:6004
 GATEWAY_LOCATION = socket://localhost:6005
 VERBOSE = true
 DEBUG = false
@@ -32,10 +33,12 @@ provisioner:
 	jolie provisioner.ol
 
 runner:
-	jolie runner.ol
+	echo '{"location":"$(RUNNER_LOCATION)"}' > runner.json
+	jolie --params runner.json runner.ol
 
 singleton:
-	jolie singleton.ol
+	echo '{"location":"$(SINGLETON_LOCATION)"}' > singleton.json
+	jolie --params singleton.json singleton.ol
 
 gateway:
 	jolie gateway.ol

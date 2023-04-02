@@ -2,8 +2,9 @@ FROM jolielang/jolie:edge-alpine
 
 WORKDIR /app
 COPY *.ol /app
+CMD echo '{"location":"socket://0.0.0.0:6003"}' > /app/runner.json
 
 EXPOSE 8010
 ENV VERBOSE false
 
-CMD jolie runner.ol
+CMD jolie --params runner.json runner.ol
