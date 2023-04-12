@@ -65,6 +65,14 @@ service Provisioner {
     rr
   }
 
+  define handle_ping_error {
+    if(global.verbose) {
+      valueToPrettyString@StringUtils( call_runner )( t )
+      println@Console( "Ping error: " + t )()
+    }
+    unregister
+  }
+
   init {
     getenv@Runtime( "PROVISIONER_LOCATION" )( ProvisionerInput.location )
     getenv@Runtime( "VERBOSE" )( global.verbose )
@@ -95,18 +103,16 @@ service Provisioner {
           scope(call_runner) {
             install(
               TypeMismatch => {
-                if(global.verbose) {
-                  valueToPrettyString@StringUtils( call_runner.TypeMismatch )( t )
-                  println@Console( "Ping error: " + t )()
-                }
-                unregister
+                handle_ping_error 
               },
               InvocationFault => {
-                if(global.verbose) {
-                  valueToPrettyString@StringUtils( call_runner.InvocationFault )( t )
-                  println@Console( "Ping error: " + t )()
-                }
-                unregister
+                handle_ping_error 
+              },
+              IOException => {
+                handle_ping_error 
+              },
+              Timeout => {
+                handle_ping_error 
               }
             )
 
@@ -114,7 +120,7 @@ service Provisioner {
             if(global.debug) {
               println@Console("Pinging " + Executor.location)()
             }
-            pongs = -1
+            pongs[i] = -1
             ping@Executor(0)(pongs)
           }
         }
@@ -122,7 +128,7 @@ service Provisioner {
           valueToPrettyString@StringUtils( pongs )( t )
           println@Console( "Pongs: " + t )()
         }
-        for( i = 0, i < #pongs, i++ ){
+        for( i = 0, i < #pongs, i++ ) {
           if(pongs[i] != 0) {
             if(global.verbose) {
               println@Console( "Ping didn't return 0: " + pongs[i] )()
