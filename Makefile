@@ -33,8 +33,7 @@ provisioner:
 	jolie provisioner.ol
 
 runner:
-	echo '{"location":"$(RUNNER_LOCATION)"}' > runner.json
-	jolie --params runner.json runner.ol
+	jolie runner_loader.ol
 
 singleton:
 	echo '{"location":"$(SINGLETON_LOCATION)"}' > singleton.json

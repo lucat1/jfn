@@ -9,7 +9,11 @@ from .function_catalog import FunctionCatalogAPI
 from .scheduler import SchedulerCallBackInterface
 
 type RunnerParams {
-  location: string
+  runnerLocation: string
+  functionCatalogLocation: string
+  provisionerLocation: string
+  verbose: bool
+  debug: bool
 }
 
 type RunRequest {
@@ -45,24 +49,26 @@ service Runner( p : RunnerParams ) {
   embed StringUtils as StringUtils
 
   outputPort FunctionCatalog {
+    location: p.functionCatalogLocation
     protocol: sodep
     interfaces: FunctionCatalogAPI
   }
 
-  outputPort Embedded {
-    protocol: sodep
-    interfaces: FunctionAPI
-  }
-
   outputPort Provisioner {
+    Location: p.provisionerLocation
     protocol: sodep
     interfaces: ProvisionerAPI
   }
 
   inputPort RunnerInput {
-    location: p.location
+    location: p.runnerLocation
     protocol: sodep
     interfaces: RunnerAPI
+  }
+
+  outputPort Embedded {
+    protocol: sodep
+    interfaces: FunctionAPI
   }
 
   inputPort SchedulerCallBack {
@@ -71,11 +77,6 @@ service Runner( p : RunnerParams ) {
   }
 
   init {
-    getenv@Runtime( "FUNCTION_CATALOG_LOCATION" )( FunctionCatalog.location )
-    getenv@Runtime( "PROVISIONER_LOCATION" )( Provisioner.location )
-    getenv@Runtime( "VERBOSE" )( global.verbose )
-    getenv@Runtime( "DEBUG" )( global.debug )
-
     enableTimestamp@Console(true)()
     getFileSeparator@File()(sep)
 
@@ -87,8 +88,8 @@ service Runner( p : RunnerParams ) {
     println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "runner"
-      ping = p.location
-      location = p.location
+      ping = p.runnerLocation
+      location = p.runnerLocation
     })()
 
     global.lastPing = true
@@ -105,13 +106,13 @@ service Runner( p : RunnerParams ) {
         second = "0/10"
       }
     })()
-    println@Console("Listening on " + p.location)()
+    println@Console("Listening on " + p.runnerLocation)()
   }
 
   main {
     [ping( request )( response ) {
       response = request
-      if(global.debug) {
+      if(p.debug) {
         println@Console("Received a ping, sending pong")()
       }
       global.lastPing = true
@@ -126,7 +127,7 @@ service Runner( p : RunnerParams ) {
     }
 
     [run( request )( response ) {
-      if(global.debug) {
+      if(p.debug) {
         valueToPrettyString@StringUtils( request )( t )
         println@Console( "Calling: " + t )()
       }
@@ -174,7 +175,7 @@ service Runner( p : RunnerParams ) {
               format = "text"
               content = content
             })()
-            if(global.verbose) {
+            if(p.verbose) {
               println@Console("Wrote function to " + filename)()
             }
           }
@@ -206,7 +207,7 @@ service Runner( p : RunnerParams ) {
           fn@Embedded(invoke_data)(output)
           response.data << output.data
           response.error = false
-          if(global.debug) {
+          if(p.debug) {
             println@Console("Run successful")()
           }
         }
