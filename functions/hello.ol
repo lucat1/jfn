@@ -7,7 +7,7 @@ interface HelloAPI {
 }
 
 service HelloPrinter {
-  execution: single
+  execution: concurrent
 
   inputPort HelloInput {
     location: "local"

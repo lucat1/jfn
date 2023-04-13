@@ -1,7 +1,7 @@
 from console import Console
 from string_utils import StringUtils
 
-type SumRequest  { data: SumData }
+type SumRequest { data: SumData }
 type SumData {
   numbers[1,*]: int
 }
@@ -13,7 +13,7 @@ interface SumAPI {
 }
 
 service Sum {
-  execution: single
+  execution: concurrent
   embed Console as Console
   embed StringUtils as StringUtils
 

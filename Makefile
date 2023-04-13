@@ -30,13 +30,13 @@ function_catalog:
 	jolie function_catalog.ol
 
 provisioner:
-	jolie provisioner.ol
+	jolie provisioner_loader.ol
 
 runner:
 	jolie runner_loader.ol
 
 singleton:
-	jolie --trace singleton_loader.ol
+	jolie singleton_loader.ol
 
 gateway:
 	jolie gateway.ol

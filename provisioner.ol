@@ -5,6 +5,12 @@ from scheduler import Scheduler
 from .scheduler import SchedulerCallBackInterface
 from .runner import RunnerAPI
 
+type ProvisionerParams {
+  provisionerLocation: string
+  verbose: bool
+  debug: bool
+}
+
 type ExecutorRequest { function: string }
 type ExecutorResponse {
   type: string
@@ -29,7 +35,7 @@ interface ExecutorAPI {
     ping( int )( int ),
 }
 
-service Provisioner {
+service Provisioner( p : ProvisionerParams ) {
   execution: concurrent
   embed Console as Console
   embed Runtime as Runtime
@@ -66,7 +72,7 @@ service Provisioner {
   }
 
   define handle_ping_error {
-    if(global.verbose) {
+    if(p.verbose) {
       valueToPrettyString@StringUtils( call_runner )( t )
       println@Console( "Ping error: " + t )()
     }
@@ -74,10 +80,6 @@ service Provisioner {
   }
 
   init {
-    getenv@Runtime( "PROVISIONER_LOCATION" )( ProvisionerInput.location )
-    getenv@Runtime( "VERBOSE" )( global.verbose )
-    getenv@Runtime( "DEBUG" )( global.debug )
-
     enableTimestamp@Console(true)()
     global.nextExecutor = 0
     setCronJob@Scheduler({
@@ -93,7 +95,7 @@ service Provisioner {
         second = "*"
       }
     })()
-    println@Console("Listening on " + ProvisionerInput.location)()
+    println@Console("Listening on " + p.provisionerLocation)()
   }
 
   main {
@@ -117,20 +119,20 @@ service Provisioner {
             )
 
             Executor.location = global.executors[i].ping
-            if(global.debug) {
+            if(p.debug) {
               println@Console("Pinging " + Executor.location)()
             }
             pongs[i] = -1
             ping@Executor(0)(pongs)
           }
         }
-        if(global.debug) {
+        if(p.debug) {
           valueToPrettyString@StringUtils( pongs )( t )
           println@Console( "Pongs: " + t )()
         }
         for( i = 0, i < #pongs, i++ ) {
           if(pongs[i] != 0) {
-            if(global.verbose) {
+            if(p.verbose) {
               println@Console( "Ping didn't return 0: " + pongs[i] )()
             }
             unregister
@@ -185,7 +187,7 @@ service Provisioner {
         undef(response.function)
       }
 
-      if(global.verbose) {
+      if(p.verbose) {
         valueToPrettyString@StringUtils( response )( t )
         println@Console( "Load balancer target: " + t )()
       }

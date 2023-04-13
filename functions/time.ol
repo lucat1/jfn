@@ -9,7 +9,7 @@ interface TimeServiceAPI {
 }
 
 service TimePrinter {
-  execution: single
+  execution: concurrent
   embed Time as Time
 
   inputPort TimeInput {

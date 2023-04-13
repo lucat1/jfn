@@ -117,7 +117,7 @@ service Singleton( p : SingletonParams) {
         second = "0/10"
       }
     })()
-    println@Console("Listening on " + p.location)()
+    println@Console("Listening on " + p.singletonLocation)()
   }
 
   main {

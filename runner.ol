@@ -210,6 +210,7 @@ service Runner( p : RunnerParams ) {
           if(p.debug) {
             println@Console("Run successful")()
           }
+          callExit@Runtime( loc )()
         }
       }
     }]
