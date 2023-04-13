@@ -36,8 +36,7 @@ runner:
 	jolie runner_loader.ol
 
 singleton:
-	echo '{"location":"$(SINGLETON_LOCATION)"}' > singleton.json
-	jolie --params singleton.json singleton.ol
+	jolie --trace singleton_loader.ol
 
 gateway:
 	jolie gateway.ol

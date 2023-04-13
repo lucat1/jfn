@@ -72,7 +72,7 @@ service Runner( p : RunnerParams ) {
   }
 
   inputPort SchedulerCallBack {
-    location: "local"
+    location: local
     interfaces: SchedulerCallBackInterface
   }
 

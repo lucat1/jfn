@@ -2,12 +2,12 @@ from console import Console
 from runtime import Runtime
 from string_utils import StringUtils
 
-interface RunnerLoaderAPI {
+interface SingletonLoaderAPI {
   RequestResponse:
     noop( void )( void ),
 }
 
-service RunnerLoader {
+service SingletonLoader {
   execution: sequential
   embed Runtime as Runtime
   embed Console as Console
@@ -15,24 +15,25 @@ service RunnerLoader {
 
   inputPort Local {
     location: "local"
-    interfaces: RunnerLoaderAPI
+    interfaces: SingletonLoaderAPI
   }
 
   init {
     params = {}
-    getenv@Runtime( "RUNNER_LOCATION" )( params.runnerLocation )
+    getenv@Runtime( "SINGLETON_LOCATION" )( params.singletonLocation )
     getenv@Runtime( "FUNCTION_CATALOG_LOCATION" )( params.functionCatalogLocation )
     getenv@Runtime( "PROVISIONER_LOCATION" )( params.provisionerLocation )
+    getenv@Runtime( "FUNCTION" )( params.function )
     getenv@Runtime( "VERBOSE" )( params.verbose )
     params.verbose = bool(params.verbose)
     getenv@Runtime( "DEBUG" )( params.debug )
     params.debug = bool(params.debug)
 
     valueToPrettyString@StringUtils( params )( t )
-    println@Console( "Loading the runner with params: " + t )()
+    println@Console( "Loading the singleton with params: " + t )()
 
     loadEmbeddedService@Runtime({
-      filepath = "runner.ol"
+      filepath = "singleton.ol"
       type = "jolie"
       params << params
     })(_)

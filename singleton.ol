@@ -8,7 +8,12 @@ from .function_catalog import FunctionCatalogAPI
 from .scheduler import SchedulerCallBackInterface
 
 type SingletonParams {
-  location: string
+  singletonLocation: string
+  functionCatalogLocation: string
+  provisionerLocation: string
+  function: string
+  verbose: bool
+  debug: bool
 }
 
 type RunRequest {
@@ -37,7 +42,7 @@ service Singleton( p : SingletonParams) {
   embed Runtime as Runtime
 
   outputPort FunctionCatalog {
-    location: global.functionCatalog
+    location: p.functionCatalogLocation 
     protocol: sodep
     interfaces: FunctionCatalogAPI
   }
@@ -48,12 +53,13 @@ service Singleton( p : SingletonParams) {
   }
 
   outputPort Provisioner {
+    location: p.provisionerLocation
     protocol: sodep
     interfaces: ProvisionerAPI
   }
 
   inputPort SingletonInput {
-    location: p.location
+    location: p.singletonLocation
     protocol: sodep
     interfaces: SingletonAPI
     redirects:
@@ -66,19 +72,14 @@ service Singleton( p : SingletonParams) {
   }
 
   init {
-    getenv@Runtime( "SINGLETON_LOCATION" )( p.location )
-    getenv@Runtime( "PROVISIONER_LOCATION" )( Provisioner.location )
-    getenv@Runtime( "FUNCTION_CATALOG_LOCATION" )( FunctionCatalog.location )
-    getenv@Runtime( "FUNCTION" )( global.function )
-
     enableTimestamp@Console(true)()
 
-    println@Console("Downloading function: " + global.function)()
+    println@Console("Downloading function: " + p.function)()
     get@FunctionCatalog({
-      name = global.function
+      name = p.function
     })(code)
     if(code.error) {
-      println@Console("Could not find function \"" + global.function + "\" in the catalog. Error: " + code.error)()
+      println@Console("Could not find function \"" + p.function + "\" in the catalog. Error: " + code.error)()
       exit
     }
     writeFile@File({
@@ -97,9 +98,9 @@ service Singleton( p : SingletonParams) {
     println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "singleton"
-      ping = p.location
-      location = p.location + "/!/Fn"
-      function = global.function
+      ping = p.singletonLocation
+      location = p.singletonLocation + "/!/Fn"
+      function = p.function
     })()
 
     global.lastPing = true
