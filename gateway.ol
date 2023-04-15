@@ -7,6 +7,12 @@ from .runner import RunnerAPI
 from .function import FunctionAPI
 from .provisioner import ProvisionerAPI
 
+type GatewayParams {
+  gatewayLocation: string
+  provisionerLocation: string
+  verbose: bool
+}
+
 type GatewayRequest {
   name: string
   data?: undefined
@@ -22,7 +28,7 @@ interface GatewayAPI {
     op( GatewayRequest )( GatewayResponse )
 }
 
-service Gateway {
+service Gateway(p : GatewayParams) {
   execution: concurrent
   embed Console as Console
   embed Math as Math
@@ -31,12 +37,13 @@ service Gateway {
   embed Reflection as Reflection
 
   inputPort GatewayInput {
-    location: "socket://0.0.0.0:6005"
+    location: p.gatewayLocation
     protocol: http { format = "json" }
     interfaces: GatewayAPI
   }
 
   outputPort Provisioner {
+    location: p.provisionerLocation
     protocol: sodep
     interfaces: ProvisionerAPI
   }
@@ -52,12 +59,8 @@ service Gateway {
   }
 
   init {
-    getenv@Runtime( "PROVISIONER_LOCATION" )( Provisioner.location )
-    getenv@Runtime( "GATEWAY_LOCATION" )( GatewayInput.location )
-    getenv@Runtime( "VERBOSE" )( global.verbose )
-
     enableTimestamp@Console(true)()
-    println@Console("Listening on " + GatewayInput.location)()
+    println@Console("Listening on " + p.gatewayLocation)()
   }
 
   main {
@@ -90,7 +93,7 @@ service Gateway {
             name = request.name
             data << request.data
           }
-          if(global.debug) {
+          if(p.verbose) {
             valueToPrettyString@StringUtils( request )( t )
             println@Console( "Sending to runner at " + executor.location)()
           }
@@ -113,7 +116,7 @@ service Gateway {
           invoke_data << {
             data << request.data
           }
-          if(global.debug) {
+          if(p.verbose) {
             valueToPrettyString@StringUtils( request )( t )
             println@Console( "Sending to singleton at " + executor.location)()
           }

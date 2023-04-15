@@ -2,12 +2,12 @@ from console import Console
 from runtime import Runtime
 from string_utils import StringUtils
 
-interface ProvisionerLoaderAPI {
+interface GatewayLoaderAPI {
   RequestResponse:
     noop( void )( void ),
 }
 
-service ProvisionerLoader {
+service GatewayLoader {
   execution: sequential
   embed Runtime as Runtime
   embed Console as Console
@@ -15,22 +15,21 @@ service ProvisionerLoader {
 
   inputPort Local {
     location: "local"
-    interfaces: ProvisionerLoaderAPI
+    interfaces: GatewayLoaderAPI
   }
 
   init {
     params = {}
+    getenv@Runtime( "GATEWAY_LOCATION" )( params.gatewayLocation )
     getenv@Runtime( "PROVISIONER_LOCATION" )( params.provisionerLocation )
     getenv@Runtime( "VERBOSE" )( params.verbose )
     params.verbose = bool(params.verbose)
-    getenv@Runtime( "DEBUG" )( params.debug )
-    params.debug = bool(params.debug)
 
     valueToPrettyString@StringUtils( params )( t )
-    println@Console( "Loading the provisioner with params: " + t )()
+    println@Console( "Loading the gateway with params: " + t )()
 
     loadEmbeddedService@Runtime({
-      filepath = "provisioner.ol"
+      filepath = "gateway.ol"
       type = "jolie"
       params << params
     })(_)

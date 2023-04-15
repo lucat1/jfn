@@ -39,4 +39,4 @@ singleton:
 	jolie singleton_loader.ol
 
 gateway:
-	jolie gateway.ol
+	jolie gateway_loader.ol
