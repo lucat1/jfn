@@ -18,4 +18,4 @@ EXPOSE 8002
 ENV FUNCTION_CATALOG_LOCATION "socket://0.0.0.0:8002"
 ENV VERBOSE false
 
-CMD jolie function_catalog.ol
+CMD jolie function_catalog_loader.ol
