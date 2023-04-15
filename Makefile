@@ -27,7 +27,7 @@ lib:
 	mkdir lib
 
 function_catalog:
-	jolie function_catalog.ol
+	jolie function_catalog_loader.ol
 
 provisioner:
 	jolie provisioner_loader.ol

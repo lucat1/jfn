@@ -3,6 +3,11 @@ from file import File
 from runtime import Runtime
 from .checksum import Checksum
 
+type FunctionCatalogParams {
+  functionCatalogLocation: string
+  verbose: bool
+}
+
 type FunctionCatalogRequest { name: string }
 type FunctionCatalogPutRequest {
   name: string
@@ -28,7 +33,7 @@ define derive_filename {
   filename = root + sep + FUNCTIONS_PATH + sep + request.name + ".ol"
 }
 
-service FunctionCatalog {
+service FunctionCatalog(p : FunctionCatalogParams) {
   execution: concurrent
   embed Console as Console
   embed Runtime as Runtime
@@ -36,26 +41,23 @@ service FunctionCatalog {
   embed Checksum as Checksum
 
   inputPort FunctionCatalogInput {
-    location: "socket://0.0.0.0:6002"
+    location: p.functionCatalogLocation
     protocol: sodep
     interfaces: FunctionCatalogAPI
   }
 
   init {
-    getenv@Runtime( "FUNCTION_CATALOG_LOCATION" )( FunctionCatalogInput.location )
-    getenv@Runtime( "VERBOSE" )( global.verbose )
-
     enableTimestamp@Console(true)()
     getFileSeparator@File()(sep)
     getServiceDirectory@File()(root)
-    println@Console("Listening on " + FunctionCatalogInput.location)()
+    println@Console("Listening on " + p.functionCatalogLocation)()
   }
 
   main {
     [hash( request )( response ) {
       derive_filename
       exists@File(filename)(exists)
-      if(global.verbose) {
+      if(p.verbose) {
         println@Console("Looking for \"" + request.name + "\" in " + filename)()
       }
       if(!exists) {
@@ -70,7 +72,7 @@ service FunctionCatalog {
     [get( request )( response ) {
       derive_filename
       exists@File(filename)(exists)
-      if(global.verbose) {
+      if(p.verbose) {
         println@Console("Looking for \"" + request.name + "\" in " + filename)()
       }
       if(!exists) {
