@@ -48,7 +48,7 @@ service Provisioner( p : ProvisionerParams ) {
   }
 
   inputPort ProvisionerInput {
-    location: "socket://0.0.0.0:6001"
+    location: p.provisionerLocation
     protocol: sodep
     interfaces: ProvisionerAPI
   }

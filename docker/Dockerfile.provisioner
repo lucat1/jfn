@@ -3,7 +3,9 @@ FROM jolielang/jolie:edge-alpine
 WORKDIR /app
 COPY *.ol /app
 
-EXPOSE 8000
-ENV DEBUG false
+EXPOSE 8001
+ENV PROVISIONER_LOCATION "socket://0.0.0.0:8001"
+ENV VERBOSE false
+ENV DEBUG   false
 
-CMD jolie provisioner.ol
+CMD jolie provisioner_loader.ol

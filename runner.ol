@@ -10,6 +10,7 @@ from .scheduler import SchedulerCallBackInterface
 
 type RunnerParams {
   runnerLocation: string
+  advertiseLocation: string
   functionCatalogLocation: string
   provisionerLocation: string
   verbose: bool
@@ -88,8 +89,8 @@ service Runner( p : RunnerParams ) {
     println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "runner"
-      ping = p.runnerLocation
-      location = p.runnerLocation
+      ping = p.advertiseLocation
+      location = p.advertiseLocation
     })()
 
     global.lastPing = true
@@ -106,7 +107,7 @@ service Runner( p : RunnerParams ) {
         second = "0/10"
       }
     })()
-    println@Console("Listening on " + p.runnerLocation)()
+    println@Console("Listening on " + p.runnerLocation + "(advertise: " + p.advertiseLocation + ")")()
   }
 
   main {

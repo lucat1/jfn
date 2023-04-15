@@ -9,6 +9,7 @@ from .scheduler import SchedulerCallBackInterface
 
 type SingletonParams {
   singletonLocation: string
+  advertiseLocation: string
   functionCatalogLocation: string
   provisionerLocation: string
   function: string
@@ -42,7 +43,7 @@ service Singleton( p : SingletonParams) {
   embed Runtime as Runtime
 
   outputPort FunctionCatalog {
-    location: p.functionCatalogLocation 
+    location: p.functionCatalogLocation
     protocol: sodep
     interfaces: FunctionCatalogAPI
   }
@@ -98,8 +99,8 @@ service Singleton( p : SingletonParams) {
     println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "singleton"
-      ping = p.singletonLocation
-      location = p.singletonLocation + "/!/Fn"
+      ping = p.advertiseLocation
+      location = p.advertiseLocation + "/!/Fn"
       function = p.function
     })()
 
@@ -117,7 +118,7 @@ service Singleton( p : SingletonParams) {
         second = "0/10"
       }
     })()
-    println@Console("Listening on " + p.singletonLocation)()
+    println@Console("Listening on " + p.singletonLocation + "(advertise: " + p.advertiseLocation + ")")()
   }
 
   main {

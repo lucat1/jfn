@@ -33,10 +33,10 @@ provisioner:
 	jolie provisioner_loader.ol
 
 runner:
-	jolie runner_loader.ol
+	ADVERTISE_LOCATION=$$RUNNER_LOCATION jolie runner_loader.ol
 
 singleton:
-	jolie singleton_loader.ol
+	ADVERTISE_LOCATION=$$RUNNER_LOCATION jolie singleton_loader.ol
 
 gateway:
 	jolie gateway_loader.ol

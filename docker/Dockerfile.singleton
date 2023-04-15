@@ -4,11 +4,12 @@ WORKDIR /app
 COPY *.ol /app
 
 EXPOSE 8010
-ENV RUNNER_LOCATION "socket://0.0.0.0:8010"
-ENV ADVERTISE_LOCATION "socket://runner:8010"
+ENV SINGLETON_LOCATION "socket://0.0.0.0:8011"
+ENV ADVERTISE_LOCATION "socket://singleton:8011"
 ENV FUNCTION_CATALOG_LOCATION "socket://function_catalog:8002"
 ENV PROVISIONER_LOCATION "socket://provisioner:8001"
+ENV FUNCTION "noop"
 ENV VERBOSE false
 ENV DEBUG   false
 
-CMD jolie runner_loader.ol
+CMD jolie singleton_loader.ol

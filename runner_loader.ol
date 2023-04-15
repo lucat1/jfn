@@ -21,6 +21,7 @@ service RunnerLoader {
   init {
     params = {}
     getenv@Runtime( "RUNNER_LOCATION" )( params.runnerLocation )
+    getenv@Runtime( "ADVERTISE_LOCATION" )( params.advertiseLocation )
     getenv@Runtime( "FUNCTION_CATALOG_LOCATION" )( params.functionCatalogLocation )
     getenv@Runtime( "PROVISIONER_LOCATION" )( params.provisionerLocation )
     getenv@Runtime( "VERBOSE" )( params.verbose )

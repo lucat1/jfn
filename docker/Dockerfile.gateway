@@ -4,6 +4,8 @@ WORKDIR /app
 COPY *.ol /app
 
 EXPOSE 8000
+ENV GATEWAY_LOCATION "socket://0.0.0.0:8000"
+ENV PROVISIONER_LOCATION "socket://provisioner:8001"
 ENV VERBOSE false
 
-CMD jolie gateway.ol
+CMD jolie gateway_loader.ol

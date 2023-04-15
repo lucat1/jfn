@@ -4,7 +4,8 @@ WORKDIR /app
 RUN apk add --no-cache openjdk11
 
 COPY *.ol /app
-COPY docker/function_catalog_params.json params.json
+RUN mkdir jfn
+COPY Checksum.java /app/jfn
 
 RUN javac -cp /usr/lib/jolie/jolie.jar jfn/Checksum.java
 RUN jar cvf checksum.jar jfn/Checksum.class
@@ -12,8 +13,9 @@ RUN mkdir lib && mv checksum.jar lib/checksum.jar
 
 RUN apk del openjdk11
 
-EXPOSE 6000
-ENV VERBOSE false
 VOLUME /data
+EXPOSE 8002
+ENV FUNCTION_CATALOG_LOCATION "socket://0.0.0.0:8002"
+ENV VERBOSE false
 
 CMD jolie function_catalog.ol
