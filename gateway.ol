@@ -14,7 +14,7 @@ type GatewayParams {
 }
 
 type GatewayRequest {
-  name: string
+  fn: string
   data?: undefined
 }
 
@@ -73,7 +73,7 @@ service Gateway(p : GatewayParams) {
           }
         )
         executor@Provisioner({
-          function = request.name
+          function = request.fn
         })(executor)
       }
       if(executor.type == "runner") {
@@ -90,7 +90,7 @@ service Gateway(p : GatewayParams) {
           )
 
           invoke_data << {
-            name = request.name
+            name = request.fn
             data << request.data
           }
           if(p.verbose) {

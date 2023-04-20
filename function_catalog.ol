@@ -11,7 +11,7 @@ type FunctionCatalogParams {
 type FunctionCatalogRequest { name: string }
 type FunctionCatalogPutRequest {
   name: string
-  content: string
+  code: string
 }
 type FunctionCatalogResult {
   error: bool
@@ -65,8 +65,8 @@ service FunctionCatalog(p : FunctionCatalogParams) {
       } else {
         readFile@File({
           .filename = filename
-        })(content)
-        sha256@Checksum(content)(response)
+        })(code)
+        sha256@Checksum(code)(response)
       }
     }]
     [get( request )( response ) {
@@ -83,10 +83,10 @@ service FunctionCatalog(p : FunctionCatalogParams) {
       } else {
         readFile@File({
           .filename = filename
-        })(content)
+        })(code)
         with(response) {
           .error = false
-          .data = content
+          .data = code
         }
       }
     }]
@@ -103,7 +103,7 @@ service FunctionCatalog(p : FunctionCatalogParams) {
         writeFile@File({
           filename = filename
           format = "text"
-          content = request.content
+          content = request.code
         })()
         response.error = false
       }
