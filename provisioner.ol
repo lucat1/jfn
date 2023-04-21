@@ -19,8 +19,8 @@ type ExecutorResponse {
 
 type RegisterRequest {
   type: string
-  location: string
-  ping: string
+  invoke_location: string
+  ping_location: string
   function?: string
 }
 
@@ -66,7 +66,7 @@ service Provisioner( p : ProvisionerParams ) {
   }
 
   define unregister {
-    println@Console("Ping failed, removing executor: #" + i + " (type: " + global.executors[i].type + ", location: " + global.executors[i].location + ")")()
+    println@Console("Ping failed, removing executor: #" + i + " (type: " + global.executors[i].type + ", location: " + global.executors[i].invoke_location + ")")()
     undef(global.executors[i])
     rr
   }
@@ -118,7 +118,7 @@ service Provisioner( p : ProvisionerParams ) {
               }
             )
 
-            Executor.location = global.executors[i].ping
+            Executor.location = global.executors[i].ping_location
             if(p.debug) {
               println@Console("Pinging " + Executor.location)()
             }
@@ -183,7 +183,9 @@ service Provisioner( p : ProvisionerParams ) {
         response.type = "error"
         response.location = "error"
       } else {
-        undef(response.ping)
+        response.location = response.invoke_location
+        undef(response.invoke_location)
+        undef(response.ping_location)
         undef(response.function)
       }
 

@@ -89,8 +89,8 @@ service Runner( p : RunnerParams ) {
     println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "runner"
-      ping = p.advertiseLocation
-      location = p.advertiseLocation
+      ping_location = p.advertiseLocation
+      invoke_location = p.advertiseLocation
     })()
 
     global.lastPing = true
