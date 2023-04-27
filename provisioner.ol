@@ -3,12 +3,22 @@ from runtime import Runtime
 from string_utils import StringUtils
 from scheduler import Scheduler
 from .scheduler import SchedulerCallBackInterface
-from .runner import RunnerAPI
+from .spawner import Spawner
 
 type ProvisionerParams {
   provisionerLocation: string
+  advertiseLocation: string
+  jockerLocation: string
+  functionCatalogLocation: string
+
   verbose: bool
   debug: bool
+
+  // provisioning parameters
+  dockerNetwork: string
+  minRunners: int
+  callsPerRunner: int
+  callsForPromotion: int
 }
 
 type ExecutorRequest { function: string }
@@ -19,8 +29,8 @@ type ExecutorResponse {
 
 type RegisterRequest {
   type: string
-  invoke_location: string
-  ping_location: string
+  invokeLocation: string
+  pingLocation: string
   function?: string
 }
 
@@ -35,14 +45,28 @@ interface ExecutorAPI {
     ping( int )( int ),
 }
 
+constants {
+  JFN_RUNNER_IMAGE = "jfn/runner",
+  JFN_SINGLETON_IMAGE = "jfn/singleton"
+}
+
 service Provisioner( p : ProvisionerParams ) {
   execution: concurrent
   embed Console as Console
   embed Runtime as Runtime
   embed Scheduler as Scheduler
   embed StringUtils as StringUtils
+  embed Spawner({
+    jockerLocation = p.jockerLocation
+  }) as Spawner
 
   outputPort Executor {
+    protocol: sodep
+    Interfaces: ExecutorAPI
+  }
+
+  outputPort Jocker {
+    location: p.jockerLocation
     protocol: sodep
     Interfaces: ExecutorAPI
   }
@@ -66,7 +90,7 @@ service Provisioner( p : ProvisionerParams ) {
   }
 
   define unregister {
-    println@Console("Ping failed, removing executor: #" + i + " (type: " + global.executors[i].type + ", location: " + global.executors[i].invoke_location + ")")()
+    println@Console("Ping failed, removing executor: #" + i + " (type: " + global.executors[i].type + ", location: " + global.executors[i].invokeLocation + ")")()
     undef(global.executors[i])
     rr
   }
@@ -95,6 +119,39 @@ service Provisioner( p : ProvisionerParams ) {
         second = "*"
       }
     })()
+    setCronJob@Scheduler({
+      jobName = "provision"
+      groupName = "provision"
+      cronSpecs << {
+        year = "*"
+        dayOfWeek = "*"
+        month = "*"
+        dayOfMonth = "?"
+        hour = "*"
+        minute = "*"
+        second = "0"
+      }
+    })()
+    for(i = 0, i < p.minRunners, i++) {
+      name = "runner-" + i
+      println@Console("Launching runner: " + name)()
+      spwn@Spawner({
+        name = name
+        type = "runner"
+        image = JFN_RUNNER_IMAGE
+
+        provisionerLocation = p.advertiseLocation
+        functionCatalogLocation = p.functionCatalogLocation
+        verbose = p.verbose
+        debug = p.debug
+      })()
+    }
+
+    // provisioning state
+    global.nextExecutor = 0
+    global.runnerCalls = 0
+    global.callsByFunction = void
+
     println@Console("Listening on " + p.provisionerLocation)()
   }
 
@@ -118,7 +175,7 @@ service Provisioner( p : ProvisionerParams ) {
               }
             )
 
-            Executor.location = global.executors[i].ping_location
+            Executor.location = global.executors[i].pingLocation
             if(p.debug) {
               println@Console("Pinging " + Executor.location)()
             }
@@ -138,21 +195,31 @@ service Provisioner( p : ProvisionerParams ) {
             unregister
           }
         }
+      } else if(request.groupName == "provision") {
+        // TODO
+        if(p.debug) {
+          valueToPrettyString@StringUtils( global.callsByFunction )( t )
+          println@Console("Provisioning: \nrunnerCalls: " + global.runnerCalls + "\ncallsByFunction: " + t)()
+        }
       }
     }
 
     [register( request )( ) {
       valueToPrettyString@StringUtils( request )( t )
       println@Console("Registered executor #" + #global.executors + ": " + t)()
-      global.executors[#global.executors] << request
+      i = #global.executors
+      global.executors[i] << request
+      global.callsByRunner[i] = 0
     }]
 
     [executor( request )( response ) {
       found = false
+      found_i = -1
       for(i = 0, i < #global.executors && !found, i++) {
         executor << global.executors[i]
         if(executor.type == "singleton" && executor.function == request.function) {
           response << executor
+          found_i = i
           found = true
         }
       }
@@ -162,6 +229,7 @@ service Provisioner( p : ProvisionerParams ) {
         if(executor.type == "runner") {
           response << executor
           global.nextExecutor = i + 1
+          found_i = i
           found = true
         }
       }
@@ -173,6 +241,7 @@ service Provisioner( p : ProvisionerParams ) {
           if(executor.type == "runner") {
             response << executor
             global.nextExecutor = i + 1
+            found_i = i
             found = true
           }
         }
@@ -183,10 +252,16 @@ service Provisioner( p : ProvisionerParams ) {
         response.type = "error"
         response.location = "error"
       } else {
-        response.location = response.invoke_location
-        undef(response.invoke_location)
-        undef(response.ping_location)
+        response.location = response.invokeLocation
+        undef(response.invokeLocation)
+        undef(response.pingLocation)
         undef(response.function)
+
+        if(response.type == "runner") {
+          global.callsByRunner[found_i]++
+        } else if(response.type == "singleton") {
+          global.callsByFunction[request.function]++
+        }
       }
 
       if(p.verbose) {

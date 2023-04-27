@@ -6,6 +6,9 @@ SINGLETON_LOCATION := socket://localhost:6004
 PROVISIONER_LOCATION = socket://localhost:6001
 FUNCTION_CATALOG_LOCATION = socket://localhost:6002
 GATEWAY_LOCATION = socket://localhost:6005
+JOCKER_LOCATION = socket://localhost:8008
+DOCKER_NETWORK = jfn
+MIN_RUNNERS = 2
 VERBOSE = true
 DEBUG = false
 # For the singleton service
@@ -40,3 +43,6 @@ singleton:
 
 gateway:
 	jolie gateway_loader.ol
+
+jocker:
+	cd jocker-source; jolie dockerAPI.ol

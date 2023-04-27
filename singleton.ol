@@ -99,8 +99,8 @@ service Singleton( p : SingletonParams) {
     println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "singleton"
-      ping_location = p.advertiseLocation
-      invoke_location = p.advertiseLocation + "/!/Fn"
+      pingLocation = p.advertiseLocation
+      invokeLocation = p.advertiseLocation + "/!/Fn"
       function = p.function
     })()
 
@@ -118,7 +118,7 @@ service Singleton( p : SingletonParams) {
         second = "0/10"
       }
     })()
-    println@Console("Listening on " + p.singletonLocation + "(advertise: " + p.advertiseLocation + ")")()
+    println@Console("Listening on " + p.singletonLocation + " (advertise: " + p.advertiseLocation + ")")()
   }
 
   main {

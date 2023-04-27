@@ -89,8 +89,8 @@ service Runner( p : RunnerParams ) {
     println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "runner"
-      ping_location = p.advertiseLocation
-      invoke_location = p.advertiseLocation
+      pingLocation = p.advertiseLocation
+      invokeLocation = p.advertiseLocation
     })()
 
     global.lastPing = true
@@ -107,7 +107,7 @@ service Runner( p : RunnerParams ) {
         second = "0/10"
       }
     })()
-    println@Console("Listening on " + p.runnerLocation + "(advertise: " + p.advertiseLocation + ")")()
+    println@Console("Listening on " + p.runnerLocation + " (advertise: " + p.advertiseLocation + ")")()
   }
 
   main {
