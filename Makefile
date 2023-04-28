@@ -8,7 +8,9 @@ FUNCTION_CATALOG_LOCATION = socket://localhost:6002
 GATEWAY_LOCATION = socket://localhost:6005
 JOCKER_LOCATION = socket://localhost:8008
 DOCKER_NETWORK = jfn
-MIN_RUNNERS = 2
+MIN_RUNNERS = 1
+CALLS_FOR_PROMOTION = 2
+CALLS_PER_RUNNER = 1
 VERBOSE = true
 DEBUG = false
 # For the singleton service
@@ -33,7 +35,7 @@ function_catalog:
 	jolie function_catalog_loader.ol
 
 provisioner:
-	jolie provisioner_loader.ol
+	ADVERTISE_LOCATION=$$PROVISIONER_LOCATION jolie provisioner_loader.ol
 
 runner:
 	ADVERTISE_LOCATION=$$RUNNER_LOCATION jolie runner_loader.ol

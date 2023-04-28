@@ -22,7 +22,7 @@ services:
       dockerfile: docker/Dockerfile.function_catalog
     environment:
       FUNCTION_CATALOG_LOCATION: "socket://0.0.0.0:8002"
-      VERBOSE: false
+      VERBOSE: true
     volumes:
       - ../functions:/app/functions
     networks:
@@ -37,7 +37,11 @@ services:
       ADVERTISE_LOCATION: "socket://provisioner:8001"
       PROVISIONER_LOCATION: "socket://0.0.0.0:8001"
       FUNCTION_CATALOG_LOCATION: "socket://catalog:8002"
-      VERBOSE: false
+      DOCKER_NETWORK: "jfn"
+      MIN_RUNNERS: 1
+      CALLS_PER_RUNNER: 3
+      CALLS_FOR_PROMOTION: 6
+      VERBOSE: true
       DEBUG: false
     depends_on:
       - jocker
@@ -70,7 +74,7 @@ services:
   #     ADVERTISE_LOCATION: "socket://runner:8010"
   #     FUNCTION_CATALOG_LOCATION: "socket://catalog:8002"
   #     PROVISIONER_LOCATION: "socket://provisioner:8001"
-  #     VERBOSE: false
+  #     VERBOSE: true
   #     DEBUG: false
   #   depends_on:
   #     - provisioner
@@ -87,7 +91,7 @@ services:
   #     FUNCTION_CATALOG_LOCATION: "socket://catalog:8002"
   #     PROVISIONER_LOCATION: "socket://provisioner:8001"
   #     FUNCTION: "hello"
-  #     VERBOSE: false
+  #     VERBOSE: true
   #     DEBUG: false
   #   depends_on:
   #     - provisioner
