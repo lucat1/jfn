@@ -20,6 +20,7 @@ service SingletonLoader {
 
   init {
     params = {}
+    getenv@Runtime( "SINGLETON_NAME" )( params.singletonName )
     getenv@Runtime( "SINGLETON_LOCATION" )( params.singletonLocation )
     getenv@Runtime( "ADVERTISE_LOCATION" )( params.advertiseLocation )
     getenv@Runtime( "FUNCTION_CATALOG_LOCATION" )( params.functionCatalogLocation )

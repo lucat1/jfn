@@ -2,6 +2,7 @@ from console import Console
 from runtime import Runtime
 from string_utils import StringUtils
 from .jocker import InterfaceAPI
+from .executor import ExecutorAPI
 
 type SpawnerParams {
   jockerLocation: string
@@ -9,7 +10,6 @@ type SpawnerParams {
 
 type SpawnRequest {
   name: string
-  type: string
   image: string
 
   provisionerLocation: string
@@ -21,11 +21,13 @@ type SpawnRequest {
 
 type KillRequest {
   id: string
+  location: string
 }
 
 interface SpawnerAPI {
   RequestResponse:
-    spwn( SpawnRequest )( string )
+    spwn( SpawnRequest )( string ),
+    kill( KillRequest )( void )
 }
 
 service Spawner( p : SpawnerParams ) {
@@ -38,6 +40,11 @@ service Spawner( p : SpawnerParams ) {
     Location: p.jockerLocation
     protocol: sodep
     Interfaces: InterfaceAPI
+  }
+
+  outputPort Executor {
+    protocol: sodep
+    Interfaces: ExecutorAPI
   }
 
   inputPort SpawnerInput {
@@ -58,6 +65,8 @@ service Spawner( p : SpawnerParams ) {
   main {
     [spwn( request )( response ) {
       // both environment variables are set to be generic
+      env[#env] = "RUNNER_NAME=" + request.name
+      env[#env] = "SINGLETON_NAME=" + request.name
       env[#env] = "RUNNER_LOCATION=socket://0.0.0.0:8010"
       env[#env] = "SINGLETON_LOCATION=socket://0.0.0.0:8010"
       env[#env] = "ADVERTISE_LOCATION=socket://" + request.name + ":8010"
@@ -80,17 +89,10 @@ service Spawner( p : SpawnerParams ) {
         } 
         Env << env
       })(res)
-      if(p.debug) {
-        valueToPrettyString@StringUtils( res )( t )
-        println@Console( "Create container response: " + t )()
-      }
       if(#res.Warnings > 0) {
         for(i = 0, i < #res.Warnings, i++) {
           println@Console("Docker warning: " + res.Warnings[i])()
         }
-      }
-      if(p.verbose) {
-        println@Console("Created container: " + res.Id)()
       }
 
       startContainer@Jocker({ id = res.Id })(start_log)
@@ -99,6 +101,22 @@ service Spawner( p : SpawnerParams ) {
         println@Console( "Start container response: " + t )()
       }
       response = res.Id
+    }]
+    [kill( request )() {
+      if(p.debug) {
+        valueToPrettyString@StringUtils( request )( t )
+        println@Console( "Killing: " + t )()
+      }
+      Executor.location = request.location
+      stop@Executor()()
+      stopContainer@Jocker({
+        id = request.id
+        t = 1
+      })
+      removeContainer@Jocker({
+        id = request.id
+        force = true
+      })
     }]
   }
 }

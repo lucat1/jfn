@@ -19,6 +19,7 @@ type ProvisionerParams {
   minRunners: int
   callsPerRunner: int
   callsForPromotion: int
+  callsPerSingleton: int
 }
 
 type ExecutorRequest { function: string }
@@ -29,6 +30,7 @@ type ExecutorResponse {
 
 type RegisterRequest {
   type: string
+  name: string
   invokeLocation: string
   pingLocation: string
   function?: string
@@ -92,27 +94,21 @@ service Provisioner( p : ProvisionerParams ) {
   // create a new tuple if not available or increase the count for an already
   // existing tuple
   define count_call {
-    found = false
-    for(i = 0, i < #global.callsByFunction && !found, i++) {
-      if(global.callsByFunction[i].function == function) {
-        global.callsByFunction[i].count++
-        found = true
-      }
+    if(response.type == "runner") {
+      global.runnerCalls++
     }
-
-    // new entry
-    if(!found) {
-      global.callsByFunction[#global.callsByFunction] << {
-        function = function
-        count = 1
-      }
+    if(!is_defined(global.callsByFunction.(request.function))) {
+      global.callsByFunction.(request.function) = 0
     }
+    global.callsByFunction.(request.function)++
   }
 
   define unregister {
     println@Console("Ping failed, removing executor: #" + i + " (type: " + global.executors[i].type + ", location: " + global.executors[i].invokeLocation + ")")()
+    if(global.executors[i].type == "runner") {
+      global.runners--
+    }
     undef(global.executors[i])
-    global.runners--
     rr
   }
 
@@ -122,6 +118,37 @@ service Provisioner( p : ProvisionerParams ) {
       println@Console( "Ping error: " + t )()
     }
     unregister
+  }
+
+  define spawn_executor {
+    getRandomUUID@StringUtils()(id)
+    name = "executor-" + id
+    spwnInfo << {
+      name = name
+      image = image
+    }
+    if(p.verbose) {
+      valueToPrettyString@StringUtils( spwnInfo )( t )
+      println@Console("Starting new executor: " + t)()
+    }
+
+    spwnInfo << {
+      provisionerLocation = p.advertiseLocation
+      functionCatalogLocation = p.functionCatalogLocation
+      verbose = p.verbose
+      debug = p.debug
+    }
+    if(is_defined(function)) {
+      spwnInfo.function = function
+    }
+    spwn@Spawner(spwnInfo)(id)
+    global.executorIdByName[name] = id
+  }
+
+  define kill_executor {
+    kill@Spawner({
+      id = id
+    })()
   }
 
   init {
@@ -154,25 +181,14 @@ service Provisioner( p : ProvisionerParams ) {
       }
     })()
     for(i = 0, i < p.minRunners, i++) {
-      name = "runner-" + i
-      println@Console("Launching runner: " + name)()
-      spwn@Spawner({
-        name = name
-        type = "runner"
-        image = JFN_RUNNER_IMAGE
-
-        provisionerLocation = p.advertiseLocation
-        functionCatalogLocation = p.functionCatalogLocation
-        verbose = p.verbose
-        debug = p.debug
-      })()
+      image = JFN_RUNNER_IMAGE
+      spawn_executor
     }
 
     // provisioning state
     global.nextExecutor = 0
     global.runners = 0
     global.runnerCalls = 0
-    global.callsByFunction = void
 
     println@Console("Listening on " + p.provisionerLocation)()
   }
@@ -220,7 +236,69 @@ service Provisioner( p : ProvisionerParams ) {
       } else if(request.groupName == "provision") {
         if(p.verbose) {
           valueToPrettyString@StringUtils( global.callsByFunction )( t )
-          println@Console("Provisioning: \nrunnerCalls: " + global.runnerCalls + "\ncallsByFunction: " + t)()
+          println@Console("PROVISIONING\nCalls handled by runners: " + global.runnerCalls + "\nCalls by function name: " + t)()
+        }
+
+        // compute how many (if any) singletons we should have per function
+        foreach(fn : global.callsByFunction) {
+          if(global.callsByFunction.(fn) > p.callsForPromotion) {
+            singletons.(fn) = global.callsByFunction.(fn) / p.callsPerSingleton
+            // decrement the number of calls by the amout that are going to be
+            // served by singletons from now on.
+            global.runnerCalls = global.runnerCalls * 
+          } else {
+            singletons.(fn) = 0
+          }
+        }
+
+        // diff between the currently running singletons (global.singletons)
+        // and the new scheduling plan (local singletons)
+        // first, create an hash map of all the function's names that have an
+        // active singleton or have been called in the current time frame
+        foreach(fn : singletons) {
+          fns.(fn) = 0
+        }
+        foreach(fn : global.singletons) {
+          fns.(fn) = 0
+        }
+        
+        // now compare and start/stop singletons where needed
+        foreach(fn : fns) {
+          new = 0
+          if(is_defined(singletons.(fn))) {
+            new = singletons.(fn)
+          }
+          old = #global.singletons.(fn)
+
+          if(new > old) {
+            n = new - old
+
+            // start n new singletons
+            for(i = 0, i < n, i++) {
+              image = JFN_SINGLETON_IMAGE
+              function = fn
+              spawn_executor
+            }
+          } else if(new < old) {
+            n = old - new
+
+            // stop n old singletons
+            for(i = 0, i < n, i++) {
+              // TODO: kill global.singletons.(fn)[i]
+              undef(global.singletons.(fn)[i])
+            }
+          }
+        }
+
+        for(i = #global.callsByFunction - 1, i >= 0, i--) {
+          tuple << global.callsByFunction[i]
+          if(tuple.count > p.callsForPromotion) {
+            image = JFN_SINGLETON_IMAGE
+            function = tuple.function
+            spawn_executor
+            global.runnerCalls = global.runnerCalls - tuple.count
+          }
+          undef(global.callsByFunction[i])
         }
 
         expectedRunners = global.runnerCalls / p.callsPerRunner
@@ -229,24 +307,15 @@ service Provisioner( p : ProvisionerParams ) {
           expectedRunners = p.minRunners
         }
         if(p.verbose) {
-          println@Console("Expected runners: " + expectedRunners + ", actualRunners: " + global.runners)()
+          println@Console("Expected runners: " + expectedRunners + " (min: " + p.minRunners + "), actualRunners: " + global.runners)()
         }
 
         start = #global.executors
         if(expectedRunners > global.runners) {
           diff = expectedRunners - global.runners
           for(i = 0, i < diff, i++) {
-            name = "runner-" + start++
-            spwn@Spawner({
-              name = name
-              type = "runner"
-              image = JFN_RUNNER_IMAGE
-
-              provisionerLocation = p.advertiseLocation
-              functionCatalogLocation = p.functionCatalogLocation
-              verbose = p.verbose
-              debug = p.debug
-            })()
+            image = JFN_RUNNER_IMAGE
+            spawn_executor
           }
         } else if(expectedRunners < global.runners) {
           start = start
@@ -254,35 +323,24 @@ service Provisioner( p : ProvisionerParams ) {
           // and they should die automatically in 10s
         }
         global.runnerCalls = 0
-
-        for(i = #global.callsByFunction - 1, i >= 0, i--) {
-          tuple = global.callsByFunction[i]
-          if(tuple.count > p.callsForPromotion) {
-            name = "singleton-" + start++
-            spwn@Spawner({
-              name = name
-              type = "singleton"
-              image = JFN_SINGLETON_IMAGE
-
-              function = tuple.function
-              provisionerLocation = p.advertiseLocation
-              functionCatalogLocation = p.functionCatalogLocation
-              verbose = p.verbose
-              debug = p.debug
-            })()
-          }
-          undef(global.callsByFunction[i])
-        }
       }
     }
 
     [register( request )( ) {
-      valueToPrettyString@StringUtils( request )( t )
-      println@Console("Registered executor #" + #global.executors + ": " + t)()
       i = #global.executors
+      valueToPrettyString@StringUtils( global.executorIdByName )( t )
+      println@Console( "executorByName: " + t )()
+      request.id = global.executorIdByName[request.name]
+      undef(global.executorIdByName[request.name])
+
+      valueToPrettyString@StringUtils( request )( t )
+      println@Console("Registered executor #" + i + ": " + t)()
       global.executors[i] << request
-      global.callsByRunner[i] = 0
-      global.runners++
+      if(request.type == "runner") {
+        global.runners++
+      } else if(request.type == "singleton") {
+        global.executors.(request.function)[#global.executors.(request.function)] = 
+      }
     }]
 
     [executor( request )( response ) {
@@ -325,19 +383,14 @@ service Provisioner( p : ProvisionerParams ) {
         response.type = "error"
         response.location = "error"
       } else {
+        count_call
+
         response.location = response.invokeLocation
         undef(response.invokeLocation)
         undef(response.pingLocation)
         undef(response.function)
-
-        if(response.type == "runner") {
-          global.runnerCalls++
-        } else if(response.type == "singleton") {
-          function = request.function
-          count_call
-          valueToPrettyString@StringUtils( global.callsByFunction )( t )
-          println@Console( "CallsByFunctionAfterCall: " + t )()
-        }
+        undef(response.name)
+        undef(response.id)
       }
       
 

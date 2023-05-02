@@ -26,12 +26,14 @@ service ProvisionerLoader {
     getenv@Runtime( "FUNCTION_CATALOG_LOCATION" )( params.functionCatalogLocation )
 
     getenv@Runtime( "DOCKER_NETWORK" )( params.dockerNetwork )
+    getenv@Runtime( "MIN_RUNNERS" )( params.minRunners )
+    params.minRunners = int(params.minRunners)
     getenv@Runtime( "CALLS_PER_RUNNER" )( params.callsPerRunner )
     params.callsPerRunner = int(params.callsPerRunner)
     getenv@Runtime( "CALLS_FOR_PROMOTION" )( params.callsForPromotion )
     params.callsForPromotion = int(params.callsForPromotion)
-    getenv@Runtime( "MIN_RUNNERS" )( params.minRunners )
-    params.minRunners = int(params.minRunners)
+    getenv@Runtime( "CALLS_PER_SINGLETON" )( params.callsPerSingleton )
+    params.callsPerSingleton = int(params.callsPerSingleton)
 
     if(params.minRunners <= 0) {
       println@Console("At least one runner is required. MIN_RUNNERS has been defaulted to 1")()

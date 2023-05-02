@@ -5,9 +5,11 @@ from runtime import Runtime
 from .function import FunctionAPI
 from .provisioner import ProvisionerAPI
 from .function_catalog import FunctionCatalogAPI
+from .executor import ExecutorAPI
 from .scheduler import SchedulerCallBackInterface
 
 type SingletonParams {
+  singletonName: string
   singletonLocation: string
   advertiseLocation: string
   functionCatalogLocation: string
@@ -24,11 +26,6 @@ type RunRequest {
 type RunResponse {
   error: bool
   data?: undefined
-}
-
-interface SingletonAPI {
-  RequestResponse:
-    ping( int )( int ),
 }
 
 constants {
@@ -62,7 +59,7 @@ service Singleton( p : SingletonParams) {
   inputPort SingletonInput {
     location: p.singletonLocation
     protocol: sodep
-    interfaces: SingletonAPI
+    interfaces: ExecutorAPI
     redirects:
       Fn => Embedded
   }
@@ -99,6 +96,7 @@ service Singleton( p : SingletonParams) {
     println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "singleton"
+      name = p.singletonName
       pingLocation = p.advertiseLocation
       invokeLocation = p.advertiseLocation + "/!/Fn"
       function = p.function
@@ -134,5 +132,9 @@ service Singleton( p : SingletonParams) {
       }
       global.lastPing = false
     }
+
+    [stop()() {
+      exit
+    }]
   }
 }

@@ -3,14 +3,17 @@ SINGLETON_LOCATION := socket://localhost:6004
 
 .EXPORT_ALL_VARIABLES:
 
+RUNNER_NAME = executor-0
+SINGLETON_NAME = executor-1
 PROVISIONER_LOCATION = socket://localhost:6001
 FUNCTION_CATALOG_LOCATION = socket://localhost:6002
 GATEWAY_LOCATION = socket://localhost:6005
 JOCKER_LOCATION = socket://localhost:8008
 DOCKER_NETWORK = jfn
 MIN_RUNNERS = 1
-CALLS_FOR_PROMOTION = 2
 CALLS_PER_RUNNER = 1
+CALLS_FOR_PROMOTION = 2
+CALLS_FOR_SINGLETON = 4
 VERBOSE = true
 DEBUG = false
 # For the singleton service

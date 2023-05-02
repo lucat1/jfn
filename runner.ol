@@ -6,9 +6,11 @@ from runtime import Runtime
 from .function import FunctionAPI
 from .provisioner import ProvisionerAPI
 from .function_catalog import FunctionCatalogAPI
+from .executor import ExecutorAPI
 from .scheduler import SchedulerCallBackInterface
 
 type RunnerParams {
+  runnerName: string
   runnerLocation: string
   advertiseLocation: string
   functionCatalogLocation: string
@@ -29,8 +31,7 @@ type RunResponse {
 
 interface RunnerAPI {
   RequestResponse:
-    ping( int )( int ),
-    run( RunRequest )( RunResponse )
+    run( RunRequest )( RunResponse ),
 }
 
 constants {
@@ -64,7 +65,7 @@ service Runner( p : RunnerParams ) {
   inputPort RunnerInput {
     location: p.runnerLocation
     protocol: sodep
-    interfaces: RunnerAPI
+    interfaces: ExecutorAPI, RunnerAPI
   }
 
   outputPort Embedded {
@@ -89,6 +90,7 @@ service Runner( p : RunnerParams ) {
     println@Console("Attaching to provisioner at " + Provisioner.location)()
     register@Provisioner({
       type = "runner"
+      name = p.runnerName
       pingLocation = p.advertiseLocation
       invokeLocation = p.advertiseLocation
     })()
@@ -214,6 +216,11 @@ service Runner( p : RunnerParams ) {
           callExit@Runtime( loc )()
         }
       }
+    }]
+
+    [stop()() {
+      println@Console("Stop signal has been received. Quitting...")()
+      exit
     }]
   }
 }
