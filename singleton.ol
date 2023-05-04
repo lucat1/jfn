@@ -2,6 +2,7 @@ from console import Console
 from scheduler import Scheduler
 from file import File
 from runtime import Runtime
+from .loader import LoaderAPI
 from .function import FunctionAPI
 from .provisioner import ProvisionerAPI
 from .function_catalog import FunctionCatalogAPI
@@ -38,6 +39,12 @@ service Singleton( p : SingletonParams) {
   embed Scheduler as Scheduler
   embed File as File
   embed Runtime as Runtime
+  
+  outputPort Parent {
+    location: "local://loader"
+    protocol: sodep
+    interfaces: LoaderAPI
+  }
 
   outputPort FunctionCatalog {
     location: p.functionCatalogLocation
@@ -78,7 +85,7 @@ service Singleton( p : SingletonParams) {
     })(code)
     if(code.error) {
       println@Console("Could not find function \"" + p.function + "\" in the catalog. Error: " + code.error)()
-      exit
+      stop@Parent()()
     }
     writeFile@File({
       filename = SINGLETON_FUNCTION_PATH
@@ -97,7 +104,7 @@ service Singleton( p : SingletonParams) {
     register@Provisioner({
       type = "singleton"
       name = p.singletonName
-      pingLocation = p.advertiseLocation
+      commsLocation = p.advertiseLocation
       invokeLocation = p.advertiseLocation + "/!/Fn"
       function = p.function
     })()
@@ -128,13 +135,14 @@ service Singleton( p : SingletonParams) {
     [schedulerCallback(request)] {
       if(!global.lastPing) {
         println@Console("Didn't receive a ping for more than 10 seconds, assuming the provisioner is dead. Quitting")()
-        exit
+        stop@Parent()()
       }
       global.lastPing = false
     }
 
     [stop()() {
-      exit
+      println@Console("Stop signal has been received. Quitting...")()
+      stop@Parent()()
     }]
   }
 }

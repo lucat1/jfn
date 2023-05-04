@@ -1,11 +1,7 @@
 from console import Console
 from runtime import Runtime
 from string_utils import StringUtils
-
-interface SingletonLoaderAPI {
-  RequestResponse:
-    noop( void )( void ),
-}
+from .loader import LoaderAPI
 
 service SingletonLoader {
   execution: sequential
@@ -14,8 +10,8 @@ service SingletonLoader {
   embed StringUtils as StringUtils
 
   inputPort Local {
-    location: "local"
-    interfaces: SingletonLoaderAPI
+    location: "local://loader"
+    interfaces: LoaderAPI
   }
 
   init {
@@ -41,8 +37,8 @@ service SingletonLoader {
     })(_)
   }
   main {
-    [noop(req)(res) {
-      req = res
+    [stop(req)(res) {
+      exit
     }]
   }
 }

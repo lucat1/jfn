@@ -12,6 +12,9 @@ services:
       nofile:
         soft: 65536
         hard: 65536
+    # disable in production to preserve the jocker logs
+    logging:
+      driver: none
     networks:
       - jfn
 
@@ -39,8 +42,9 @@ services:
       FUNCTION_CATALOG_LOCATION: "socket://catalog:8002"
       DOCKER_NETWORK: "jfn"
       MIN_RUNNERS: 1
-      CALLS_PER_RUNNER: 3
-      CALLS_FOR_PROMOTION: 6
+      CALLS_PER_RUNNER: 2
+      CALLS_FOR_PROMOTION: 3
+      CALLS_PER_SINGLETON: 12
       VERBOSE: true
       DEBUG: false
     depends_on:

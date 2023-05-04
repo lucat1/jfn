@@ -1,11 +1,7 @@
 from console import Console
 from runtime import Runtime
 from string_utils import StringUtils
-
-interface RunnerLoaderAPI {
-  RequestResponse:
-    noop( void )( void ),
-}
+from .loader import LoaderAPI
 
 service RunnerLoader {
   execution: sequential
@@ -14,8 +10,8 @@ service RunnerLoader {
   embed StringUtils as StringUtils
 
   inputPort Local {
-    location: "local"
-    interfaces: RunnerLoaderAPI
+    location: "local://loader"
+    interfaces: LoaderAPI
   }
 
   init {
@@ -40,8 +36,8 @@ service RunnerLoader {
     })(_)
   }
   main {
-    [noop(req)(res) {
-      req = res
+    [stop(req)(res) {
+      exit
     }]
   }
 }

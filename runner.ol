@@ -3,6 +3,7 @@ from scheduler import Scheduler
 from string_utils import StringUtils
 from file import File
 from runtime import Runtime
+from .loader import LoaderAPI
 from .function import FunctionAPI
 from .provisioner import ProvisionerAPI
 from .function_catalog import FunctionCatalogAPI
@@ -50,6 +51,12 @@ service Runner( p : RunnerParams ) {
   embed Runtime as Runtime
   embed StringUtils as StringUtils
 
+  outputPort Parent {
+    location: "local://loader"
+    protocol: sodep
+    interfaces: LoaderAPI
+  }
+
   outputPort FunctionCatalog {
     location: p.functionCatalogLocation
     protocol: sodep
@@ -91,7 +98,7 @@ service Runner( p : RunnerParams ) {
     register@Provisioner({
       type = "runner"
       name = p.runnerName
-      pingLocation = p.advertiseLocation
+      commsLocation = p.advertiseLocation
       invokeLocation = p.advertiseLocation
     })()
 
@@ -124,7 +131,7 @@ service Runner( p : RunnerParams ) {
     [schedulerCallback(request)] {
       if(!global.lastPing) {
         println@Console("Didn't receive a ping for more than 10 seconds, assuming the provisioner is dead. Quitting")()
-        exit
+        stop@Parent()()
       }
       global.lastPing = false
     }
@@ -220,7 +227,7 @@ service Runner( p : RunnerParams ) {
 
     [stop()() {
       println@Console("Stop signal has been received. Quitting...")()
-      exit
+      stop@Parent()()
     }]
   }
 }
