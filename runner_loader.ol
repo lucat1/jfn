@@ -1,4 +1,5 @@
 from console import Console
+from time import Time
 from runtime import Runtime
 from string_utils import StringUtils
 from .loader import LoaderAPI
@@ -7,6 +8,7 @@ service RunnerLoader {
   execution: sequential
   embed Runtime as Runtime
   embed Console as Console
+  embed Time as Time
   embed StringUtils as StringUtils
 
   inputPort Local {
@@ -26,6 +28,7 @@ service RunnerLoader {
     getenv@Runtime( "DEBUG" )( params.debug )
     params.debug = bool(params.debug)
 
+    sleep@Time(1000)()
     valueToPrettyString@StringUtils( params )( t )
     println@Console( "Loading the runner with params: " + t )()
 

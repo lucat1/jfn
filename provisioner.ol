@@ -90,18 +90,38 @@ service Provisioner( p : ProvisionerParams ) {
     global.callsByFunction.(request.function)++
   }
 
+  define undef_exe {
+    found = false
+    if(exe.type == "runner") {
+      for(j = 0, j < #global.runners && !found, j++) {
+        println@Console("try " + global.runners[j].id + ", expect " + exe.id)()
+        if(global.runners[j].id == exe.id) {
+          found = true
+          undef(global.runners[j])
+        }
+      }
+    } else if(exe.type == "singleton") {
+      for(j = 0, j < #global.singletons && !found, j++) {
+        println@Console("(sing) try " + global.runners[j].id + ", expect " + exe.id)()
+        if(global.singletons[j].id == exe.id) {
+          found = true
+          undef(global.singletons[j])
+        }
+      }
+    }
+  }
+
   define handle_ping_error {
     valueToPrettyString@StringUtils( exe )( t )
     valueToPrettyString@StringUtils( call_runner )( err )
     println@Console("Ping error on " + t + "Removing executor: #" + i + " (type: " + collection[i].type + ", location: " + collection[i].invokeLocation + ")\n" + err)()
     // TODO: check that the link works with undef later too
     exe -> collection[i]
-    undef(exe)
+    undef_exe
   }
 
   define ping_all {
-    valueToPrettyString@StringUtils( collection )( t )
-    println@Console("collection: " + t + ", len: " + #collection)()
+    println@Console("collection len: " + #collection)()
     spawn(i over #collection) in pongs {
       if(is_defined(collection[i])) {
         scope(call_runner) {
@@ -137,7 +157,7 @@ service Provisioner( p : ProvisionerParams ) {
       if(pongs[i] != 0) {
         println@Console("Ping didn't return 0, removing executor: #" + i + " (type: " + collection[i].type + ", location: " + collection[i].invokeLocation + ")")()
         exe -> collection[i]
-        undef(exe)
+        undef_exe
       }
     }
   }
@@ -185,7 +205,8 @@ service Provisioner( p : ProvisionerParams ) {
     if(spwn_res.error) {
       println@Console("Error while killing a service:\n" + spwn_res.data)()
     }
-    undef(exe)
+
+    undef_exe
   }
 
   init {
