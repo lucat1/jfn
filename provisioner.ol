@@ -101,13 +101,21 @@ service Provisioner( p : ProvisionerParams ) {
         }
       }
     } else if(exe.type == "singleton") {
-      for(j = 0, j < #global.singletons && !found, j++) {
-        println@Console("(sing) try " + global.runners[j].id + ", expect " + exe.id)()
-        if(global.singletons[j].id == exe.id) {
+      for(j = 0, j < #global.singletons.(exe.function) && !found, j++) {
+        println@Console("(sing) try " + global.singletons.(exe.function)[j].id + ", expect " + exe.id)()
+        if(global.singletons.(exe.function)[j].id == exe.id) {
           found = true
-          undef(global.singletons[j])
+          println@Console("found: " + #global.singletons.(exe.function))()
+          undef(global.singletons.(exe.function)[j])
+          valueToPrettyString@StringUtils( global.singletons.(exe.function) )( t )
+          println@Console("print test: " + t + ", len = " + #global.singletons.(exe.function))()
         }
       }
+    }
+  
+    if(!found) {
+      valueToPrettyString@StringUtils( exe )( t )
+      println@Console("WARNING: trying to remove executor but it was not found in any collection: " + t)()
     }
   }
 
@@ -121,7 +129,6 @@ service Provisioner( p : ProvisionerParams ) {
   }
 
   define ping_all {
-    println@Console("collection len: " + #collection)()
     spawn(i over #collection) in pongs {
       if(is_defined(collection[i])) {
         scope(call_runner) {
@@ -261,9 +268,15 @@ service Provisioner( p : ProvisionerParams ) {
           ping_all
         }
 
+
+        valueToPrettyString@StringUtils( global.singletons )( t )
+        println@Console("singletons " + t)()
         foreach(fn : global.singletons) {
           collection -> global.singletons.(fn)
+          println@Console("collection " + fn + " has len = " + #collection + " or " + #global.singletons.(fn))()
           if(#collection > 0) {
+            valueToPrettyString@StringUtils( collection )( t )
+            println@Console("collection: " + t)()
             ping_all
           }
         }
@@ -275,11 +288,16 @@ service Provisioner( p : ProvisionerParams ) {
 
         // compute how many (if any) singletons we should have per function
         foreach(fn : global.callsByFunction) {
-          if(global.callsByFunction.(fn) > p.callsForPromotion) {
-            singletons.(fn) = global.callsByFunction.(fn) / p.callsPerSingleton
+          println@Console("calls for " + fn + ": " + global.callsByFunction.(fn) + " are " + p.callsForPromotion)()
+          if(global.callsByFunction.(fn) >= p.callsForPromotion) {
+            n = global.callsByFunction.(fn) / p.callsPerSingleton
+            if(n <= 0) {
+              n = 1
+            }
+            singletons.(fn) = n
             // decrement the number of calls by the amout that are going to be
             // served by singletons from now on.
-            global.calls = global.calls - singletons.(fn) * p.callsPerSingleton
+            global.calls = global.calls - (n * p.callsPerSingleton)
           } else {
             singletons.(fn) = 0
           }
@@ -315,6 +333,7 @@ service Provisioner( p : ProvisionerParams ) {
           }
           old = #global.singletons.(fn)
 
+          println@Console("old = " + old + ", expected = " + expected)()
           if(expected > old) {
             n = expected - old
 
@@ -326,12 +345,14 @@ service Provisioner( p : ProvisionerParams ) {
             }
           } else if(expected < old) {
             // stop n old singletons
-            for(i = old, i > expected, i--) {
+            for(i = old - 1, i >= expected, i--) {
               exe -> global.singletons.(fn)[i]
               kill_executor
             }
           }
         }
+        valueToPrettyString@StringUtils( global.singletons )( t )
+        println@Console("singletons after scaling: " + t)()
 
         // compare and start/stop runners where needed
         expected = runners
