@@ -1,5 +1,6 @@
 from console import Console
 from runtime import Runtime
+from time import Time
 from string_utils import StringUtils
 from scheduler import Scheduler
 from .scheduler import SchedulerCallBackInterface
@@ -51,6 +52,7 @@ constants {
 service Provisioner( p : ProvisionerParams ) {
   execution: concurrent
   embed Console as Console
+  embed Time as Time
   embed Runtime as Runtime
   embed Scheduler as Scheduler
   embed StringUtils as StringUtils
@@ -101,14 +103,15 @@ service Provisioner( p : ProvisionerParams ) {
         }
       }
     } else if(exe.type == "singleton") {
-      for(j = 0, j < #global.singletons.(exe.function) && !found, j++) {
-        println@Console("(sing) try " + global.singletons.(exe.function)[j].id + ", expect " + exe.id)()
-        if(global.singletons.(exe.function)[j].id == exe.id) {
+      fn << exe.function
+      for(j = 0, j < #global.singletons.(fn) && !found, j++) {
+        println@Console("(sing) try " + global.singletons.(fn)[j].id + ", expect " + exe.id)()
+        if(global.singletons.(fn)[j].id == exe.id) {
           found = true
-          println@Console("found: " + #global.singletons.(exe.function))()
-          undef(global.singletons.(exe.function)[j])
-          valueToPrettyString@StringUtils( global.singletons.(exe.function) )( t )
-          println@Console("print test: " + t + ", len = " + #global.singletons.(exe.function))()
+          println@Console("found: " + #global.singletons.(fn))()
+          undef(global.singletons.(fn)[j])
+          valueToPrettyString@StringUtils( global.singletons )( t )
+          println@Console("within undef_exe: " + t + ", len = " + #global.singletons.(fn))()
         }
       }
     }
@@ -152,6 +155,7 @@ service Provisioner( p : ProvisionerParams ) {
             println@Console("Pinging singleton " + Executor.location)()
           }
           pongs[i] = -1
+          println@Console("pinging: " + collection[i].commsLocation)()
           ping@Executor(0)(pongs)
         }
       }
@@ -178,7 +182,7 @@ service Provisioner( p : ProvisionerParams ) {
     }
     if(p.verbose) {
       valueToPrettyString@StringUtils( spwnInfo )( t )
-      println@Console("Starting expected executor: " + t)()
+      println@Console("Starting executor: " + t)()
     }
 
     spwnInfo << {
@@ -194,7 +198,7 @@ service Provisioner( p : ProvisionerParams ) {
     if(spwn_res.error) {
       println@Console("Error while spawning a expected service:\n" + spwn_res.data)()
     } else {
-      global.executorIdByName[name] = spwn_res.id
+      global.executorIdByName.(name) = spwn_res.id
     }
   }
 
@@ -208,9 +212,9 @@ service Provisioner( p : ProvisionerParams ) {
     stop@Executor()()
 
     // kill and remove the container
-    kill@Spawner(exe.id)(res)
-    if(spwn_res.error) {
-      println@Console("Error while killing a service:\n" + spwn_res.data)()
+    kill@Spawner(exe.id)(kill_res)
+    if(kill_res.error) {
+      println@Console("Error while killing a service:\n" + kill_res.data)()
     }
 
     undef_exe
@@ -218,7 +222,6 @@ service Provisioner( p : ProvisionerParams ) {
 
   init {
     enableTimestamp@Console(true)()
-    global.nextExecutor = 0
     setCronJob@Scheduler({
       jobName = "ping"
       groupName = "ping"
@@ -262,21 +265,25 @@ service Provisioner( p : ProvisionerParams ) {
 
   main {
     [schedulerCallback(request)] {
-      if(request.groupName == "ping") {
+      format = "kk:mm:ss"
+      getCurrentDateTime@Time({
+        format = format
+      })(time_str)
+      getTimeValues@Time(time_str)(time)
+
+      if(time.second != 0 && request.groupName == "ping") {
+        valueToPrettyString@StringUtils( global )( t )
+        println@Console("global " + t)()
+
         collection -> global.runners
         if(#collection > 0) {
           ping_all
         }
 
-
-        valueToPrettyString@StringUtils( global.singletons )( t )
-        println@Console("singletons " + t)()
         foreach(fn : global.singletons) {
           collection -> global.singletons.(fn)
           println@Console("collection " + fn + " has len = " + #collection + " or " + #global.singletons.(fn))()
           if(#collection > 0) {
-            valueToPrettyString@StringUtils( collection )( t )
-            println@Console("collection: " + t)()
             ping_all
           }
         }
@@ -288,13 +295,12 @@ service Provisioner( p : ProvisionerParams ) {
 
         // compute how many (if any) singletons we should have per function
         foreach(fn : global.callsByFunction) {
-          println@Console("calls for " + fn + ": " + global.callsByFunction.(fn) + " are " + p.callsForPromotion)()
           if(global.callsByFunction.(fn) >= p.callsForPromotion) {
             n = global.callsByFunction.(fn) / p.callsPerSingleton
             if(n <= 0) {
               n = 1
             }
-            singletons.(fn) = n
+            expected_singletons.(fn) = n
             // decrement the number of calls by the amout that are going to be
             // served by singletons from now on.
             global.calls = global.calls - (n * p.callsPerSingleton)
@@ -307,7 +313,7 @@ service Provisioner( p : ProvisionerParams ) {
         // and the expected scheduling plan (local singletons)
         // first, create an hash map of all the function's names that have an
         // active singleton or have been called in the current time frame
-        foreach(fn : singletons) {
+        foreach(fn : expected_singletons) {
           fns.(fn) = 0
         }
         foreach(fn : global.singletons) {
@@ -321,19 +327,19 @@ service Provisioner( p : ProvisionerParams ) {
         }
 
         if(p.verbose) {
-          valueToPrettyString@StringUtils( singletons )( t )
+          valueToPrettyString@StringUtils( expected_singletons )( t )
           println@Console("PROVISION PLAN\nRunners: " + runners + "\nSingletons: " + t)()
         }
         
         // compare and start/stop singletons where needed
         foreach(fn : fns) {
           expected = 0
-          if(is_defined(singletons.(fn))) {
-            expected = singletons.(fn)
+          if(is_defined(expected_singletons.(fn))) {
+            expected = expected_singletons.(fn)
           }
           old = #global.singletons.(fn)
 
-          println@Console("old = " + old + ", expected = " + expected)()
+          println@Console("fn = " + fn + ", old = " + old + ", expected = " + expected)()
           if(expected > old) {
             n = expected - old
 
@@ -352,7 +358,10 @@ service Provisioner( p : ProvisionerParams ) {
           }
         }
         valueToPrettyString@StringUtils( global.singletons )( t )
-        println@Console("singletons after scaling: " + t)()
+        println@Console("after scaling: " + t)()
+        foreach(fn : fns) {
+          println@Console("#singletons.(" + fn +  ") = " + #global.singletons.(fn))()
+        }
 
         // compare and start/stop runners where needed
         expected = runners
@@ -382,20 +391,26 @@ service Provisioner( p : ProvisionerParams ) {
     }
 
     [register( request )( ) {
-      request.id = global.executorIdByName[request.name]
-      undef(global.executorIdByName[request.name])
+      request.id = global.executorIdByName.(request.name)
+      undef(global.executorIdByName.(request.name))
+  
+      // if this executor was not supposed to be registered, ignore the request
+      // and let it die of ping timeout.
+      if(is_defined(request.id)) {
+        valueToPrettyString@StringUtils( request )( t )
+        println@Console("Registered executor #" + i + ": " + t)()
 
-      valueToPrettyString@StringUtils( request )( t )
-      println@Console("Registered executor #" + i + ": " + t)()
-
-      // register the executor in its appropriate tracking structure
-      if(request.type == "runner") {
-        i = #global.runners
-        println@Console("new pos: " + i)()
-        global.runners[i] << request
-      } else if(request.type == "singleton") {
-        coll -> global.singletons.(request.function)
-        coll[#coll] << request
+        // register the executor in its appropriate tracking structure
+        if(request.type == "runner") {
+          i = #global.runners
+          println@Console("new pos: " + i)()
+          global.runners[i] << request
+        } else if(request.type == "singleton") {
+          coll -> global.singletons.(request.function)
+          coll[#coll] << request
+        }
+      } else {
+        println@Console("WARN: Tried to register an executor with no assigned container id: " + request.name )()
       }
     }]
 
