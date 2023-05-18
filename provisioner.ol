@@ -126,13 +126,14 @@ service Provisioner( p : ProvisionerParams ) {
     valueToPrettyString@StringUtils( exe )( t )
     valueToPrettyString@StringUtils( call_runner )( err )
     println@Console("Ping error on " + t + "Removing executor: #" + i + " (type: " + collection[i].type + ", location: " + collection[i].invokeLocation + ")\n" + err)()
-    // TODO: check that the link works with undef later too
     exe -> collection[i]
     undef_exe
   }
 
   define ping_all {
+    println@Console("called print_all")()
     spawn(i over #collection) in pongs {
+      println@Console("print_all (" + i + ")")()
       if(is_defined(collection[i])) {
         scope(call_runner) {
           install(
@@ -151,19 +152,26 @@ service Provisioner( p : ProvisionerParams ) {
           )
 
           Executor.location = collection[i].commsLocation
-          if(p.debug) {
-            println@Console("Pinging singleton " + Executor.location)()
-          }
           pongs[i] = -1
-          println@Console("pinging: " + collection[i].commsLocation)()
+
+          if(p.debug) {
+            println@Console("Pinging: " + Executor.location)()
+          }
+          println@Console("pre: " + Executor.location)()
           ping@Executor(0)(pongs)
+          println@Console("after: " + Executor.location)()
         }
+      } else {
+        valueToPrettyString@StringUtils( collection )( t )
+        println@Console( "WARNING: Iterated over undefined item (index " + i + "): " + t )()
       }
     }
+
     if(p.debug) {
       valueToPrettyString@StringUtils( pongs )( t )
       println@Console( "Pongs: " + t )()
     }
+
     for( i = 0, i < #pongs, i++ ) {
       if(pongs[i] != 0) {
         println@Console("Ping didn't return 0, removing executor: #" + i + " (type: " + collection[i].type + ", location: " + collection[i].invokeLocation + ")")()
@@ -410,7 +418,7 @@ service Provisioner( p : ProvisionerParams ) {
           coll[#coll] << request
         }
       } else {
-        println@Console("WARN: Tried to register an executor with no assigned container id: " + request.name )()
+        println@Console("WARNING: Tried to register an executor with no assigned container id: " + request.name )()
       }
     }]
 
