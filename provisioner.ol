@@ -58,6 +58,9 @@ service Provisioner( p : ProvisionerParams ) {
   embed StringUtils as StringUtils
   embed Spawner({
     jockerLocation = p.jockerLocation
+    dockerNetwork = p.dockerNetwork
+    verbose = p.verbose
+    debug = p.debug
   }) as Spawner
 
   outputPort Executor {

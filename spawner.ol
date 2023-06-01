@@ -5,6 +5,9 @@ from .jocker import InterfaceAPI
 
 type SpawnerParams {
   jockerLocation: string
+  dockerNetwork: string
+  verbose: bool
+  debug: bool
 }
 
 type SpawnRequest {
@@ -67,11 +70,6 @@ service Spawner( p : SpawnerParams ) {
 
   init {
     enableTimestamp@Console(true)()
-    
-    // TODO: fix
-    p.dockerNetwork = "jfn"
-    p.verbose = true
-    p.debug = true
   }
 
   main {
